@@ -536,9 +536,18 @@ async function startScraping(){
   for(const pageUrl of state.pages){
     addLog('Conectando: '+pageUrl,'info');
     try{
-      const runRes=await fetch(APIFY_PROXY+'/v2/acts/apify~facebook-posts-scraper/runs?token='+token,{
+      const runRes=await fetch(APIFY_PROXY+'/v2/acts/apify~facebook-pages-scraper/runs?token='+token,{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({startUrls:[{url:pageUrl}],resultsLimit:maxPosts,scrapeAboutPage:false,scrapeReviews:false})
+        body:JSON.stringify({
+          startUrls:[{url:pageUrl}],
+          maxPosts: maxPosts,
+          maxPostComments: 0,
+          maxReviews: 0,
+          scrapeAbout: false,
+          scrapeReviews: false,
+          scrapeRatings: false,
+          scrapeInfo: false
+        })
       });
       const runData=await runRes.json();
       const runId=runData.data?.id;
@@ -561,17 +570,37 @@ async function startScraping(){
       const items=await itemsRes.json();
       addLog('Posts recibidos: '+items.length,'ok');
       let added=0;
+      // facebook-pages-scraper devuelve posts dentro de cada página
+      let allPosts = [];
       for(const item of items){
-        const reactions=item.likes||item.reactionsCount||0;
-        const shares=item.shares||item.sharesCount||0;
+        // El actor puede devolver la página con sus posts adentro
+        if(item.posts && Array.isArray(item.posts)){
+          allPosts = allPosts.concat(item.posts);
+        } else {
+          allPosts.push(item);
+        }
+      }
+      addLog('Posts totales encontrados: '+allPosts.length, 'info');
+
+      for(const item of allPosts){
+        const reactions=item.likes||item.reactionsCount||item.likesCount||0;
+        const shares=item.shares||item.sharesCount||item.sharesCount||0;
         if(reactions<minLikes||shares<minShares) continue;
-        const imgUrl=item.media?.[0]?.thumbnail||item.media?.[0]?.url||item.topImage||'';
+        // Obtener texto completo - facebook-pages-scraper devuelve más campos
+        const fullText = item.text||item.postText||item.story||item.message||'Post sin texto';
+        // Obtener imagen - múltiples fuentes
+        const imgUrl = item.media?.[0]?.thumbnail||item.media?.[0]?.url||
+                       item.photo?.image?.uri||item.attachments?.[0]?.media?.image?.uri||
+                       item.topImage||item.image||'';
         state.posts.push({
-          id:item.postId||(Date.now()+Math.random()).toString(36),
-          page:pageUrl, title:item.text?.substring(0,300)||'Post sin texto',
+          id:item.postId||item.id||(Date.now()+Math.random()).toString(36),
+          page:pageUrl,
+          title: fullText, // texto COMPLETO sin substring
           titleEdited:'', imageUrl:imgUrl, imageEdited:'',
-          reactions,shares, comments:item.comments||item.commentsCount||0,
-          postUrl:item.url||'', date:item.time?new Date(item.time).toLocaleDateString('es-MX'):'',
+          reactions, shares,
+          comments:item.comments||item.commentsCount||item.commentCount||0,
+          postUrl:item.url||item.link||'',
+          date:item.time||item.date?new Date(item.time||item.date).toLocaleDateString('es-MX'):'',
           status:'scraped', aiImproved:false, aiDescription:''
         });
         added++;
