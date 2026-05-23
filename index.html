@@ -227,6 +227,8 @@ select option{background:var(--surface2)}textarea{resize:vertical}
 .opt-item span{font-size:12px;color:var(--text)}
 .title-edit-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
 .title-edit-row textarea{flex:1;height:72px;font-size:13px;margin:0}
+.see-more-btn{color:var(--accent);cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap}
+.see-more-btn:hover{text-decoration:underline}
 .title-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
 </style>
 </head>
@@ -594,18 +596,37 @@ function renderScrapedResults(){
   const c=document.getElementById('scraped-results');
   if(!state.posts.length){c.innerHTML='';return;}
   c.innerHTML=`<div class="card"><div class="card-title">📋 Posts encontrados (${state.posts.length})</div>
-  <div class="post-grid">${state.posts.map(p=>`
-    <div class="post-card">
-      ${cardImg(p.imageUrl,p.title)}
-      <div class="post-card-body">
-        <div class="post-card-title">${p.title.substring(0,90)}</div>
-        <div class="post-card-meta">❤️ ${p.reactions.toLocaleString()} · 🔄 ${p.shares.toLocaleString()} · ${p.date}</div>
+  <div style="display:flex;flex-direction:column;gap:16px;margin-top:8px">${state.posts.map((p,idx)=>`
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+      ${p.imageUrl?`
+      <div style="width:100%;max-height:320px;overflow:hidden;cursor:pointer;position:relative;background:#111;display:flex;align-items:center;justify-content:center" onclick="openLB('${esc(p.imageUrl)}','${esc(p.title.substring(0,60))}')">
+        <img src="${p.imageUrl}" style="width:100%;height:100%;object-fit:contain;max-height:320px;display:block" onerror="this.parentElement.style.display='none'"/>
+        <span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.65);color:#fff;font-size:10px;padding:2px 8px;border-radius:6px">🔍 Ampliar</span>
+      </div>`:''}
+      <div style="padding:12px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+          <span id="post-text-short-${idx}">${p.title.substring(0,140)}${p.title.length>140?`<span class="see-more-btn" onclick="togglePostText(${idx})"> Ver más</span>`:''}</span>
+          <span id="post-text-full-${idx}" style="display:none">${p.title}<span class="see-more-btn" onclick="togglePostText(${idx})"> Ver menos</span></span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div style="font-size:11px;color:var(--muted)">❤️ ${p.reactions.toLocaleString()} · 🔄 ${p.shares.toLocaleString()} · ${p.date}</div>
+          <div style="display:flex;gap:6px">
+            <span class="tag tag-viral">Viral</span>
+            <button class="btn btn-primary btn-sm" onclick="goToEditor('${p.id}')">✨ Editar</button>
+          </div>
+        </div>
       </div>
-      <div class="post-card-actions">
-        <span class="tag tag-viral">Viral</span>
-        <button class="btn btn-primary btn-sm" onclick="goToEditor('${p.id}')">Editar →</button>
-      </div>
-    </div>`).join('')}</div></div>`;
+    </div>`).join('')}
+  </div></div>`;
+}
+
+function togglePostText(idx){
+  const short=document.getElementById('post-text-short-'+idx);
+  const full=document.getElementById('post-text-full-'+idx);
+  if(!short||!full) return;
+  const isShowing=full.style.display==='block';
+  short.style.display=isShowing?'block':'none';
+  full.style.display=isShowing?'none':'block';
 }
 
 function renderEditorList(){
@@ -616,17 +637,36 @@ function renderEditorList(){
   if(!pending.length){e.style.display='block';c.innerHTML='';b.style.display='none';return;}
   e.style.display='none'; b.style.display='inline-block'; b.textContent=pending.length;
   c.innerHTML=`<div class="card"><div class="card-title">✨ Listos para editar (${pending.length})</div>
-  <div class="post-grid">${pending.map(p=>`
-    <div class="post-card">
-      ${cardImg(p.imageEdited||p.imageUrl,p.titleEdited||p.title)}
-      <div class="post-card-body">
-        <div class="post-card-title">${(p.titleEdited||p.title).substring(0,90)}</div>
-        <div class="post-card-meta">❤️ ${p.reactions.toLocaleString()} · ${p.date}</div>
+  <div style="display:flex;flex-direction:column;gap:16px;margin-top:8px">${pending.map((p,idx)=>`
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+      ${(p.imageEdited||p.imageUrl)?`
+      <div style="width:100%;max-height:320px;overflow:hidden;cursor:pointer;position:relative;background:#111;display:flex;align-items:center;justify-content:center" onclick="openLB('${esc(p.imageEdited||p.imageUrl)}','${esc((p.titleEdited||p.title).substring(0,60))}')">
+        <img src="${p.imageEdited||p.imageUrl}" style="width:100%;object-fit:contain;max-height:320px;display:block" onerror="this.parentElement.style.display='none'" ${p.imageEdited?'style="filter:saturate(1.2) contrast(1.1)"':''}/>
+        <span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.65);color:#fff;font-size:10px;padding:2px 8px;border-radius:6px">🔍 Ampliar</span>
+        ${p.imageEdited?'<span style="position:absolute;top:8px;left:8px;background:var(--green);color:#fff;font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700">✓ Editado</span>':''}
+      </div>`:''}
+      <div style="padding:12px">
+        <div style="font-size:12px;color:var(--text);margin-bottom:8px;line-height:1.6">
+          <span id="editor-text-short-${idx}">${(p.titleEdited||p.title).substring(0,140)}${(p.titleEdited||p.title).length>140?`<span class="see-more-btn" onclick="toggleEditorText(${idx})"> Ver más</span>`:''}</span>
+          <span id="editor-text-full-${idx}" style="display:none">${p.titleEdited||p.title}<span class="see-more-btn" onclick="toggleEditorText(${idx})"> Ver menos</span></span>
+          ${p.titleEdited?`<div style="margin-top:4px;font-size:10px;color:var(--accent);font-weight:600">✨ Título reescrito</div>`:''}
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div style="font-size:11px;color:var(--muted)">❤️ ${p.reactions.toLocaleString()} · ${p.date}</div>
+          <button class="btn btn-primary btn-sm" onclick="openDetail('${p.id}')">🤖 Editar con IA</button>
+        </div>
       </div>
-      <div class="post-card-actions" style="width:100%">
-        <button class="btn btn-primary btn-sm btn-full" onclick="openDetail('${p.id}')">🤖 Editar con gpt-image-1</button>
-      </div>
-    </div>`).join('')}</div></div>`;
+    </div>`).join('')}
+  </div></div>`;
+}
+
+function toggleEditorText(idx){
+  const short=document.getElementById('editor-text-short-'+idx);
+  const full=document.getElementById('editor-text-full-'+idx);
+  if(!short||!full) return;
+  const isShowing=full.style.display==='block';
+  short.style.display=isShowing?'block':'none';
+  full.style.display=isShowing?'none':'block';
 }
 
 function goToEditor(id){
@@ -676,20 +716,73 @@ async function rewriteTitle(){
   btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
   statusEl.style.display='block'; statusEl.style.color='var(--muted)'; statusEl.textContent='Reescribiendo con GPT-4o...';
   const brandName=document.getElementById('brand-name').value;
+
+  // Guardar original para comparar
+  state.selectedPost.titleOriginalForCompare = currentTitle;
+
   try{
     const res=await fetch(OPENAI_REWRITE,{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({prompt:`Reescribe este título/descripción de noticia de forma viral para Facebook en español latino. Cambia suficiente para que no parezca copia pero mantén contexto y veracidad. Tono cercano y curioso. Máximo 2-3 oraciones. ${brandName?'Página: '+brandName+'.':''} Título original: "${currentTitle}"\n\nResponde SOLO con el texto reescrito.`})
+      body:JSON.stringify({prompt:`Eres experto en contenido viral para Facebook en español latino. Reescribe el siguiente texto de noticia de forma atractiva y viral. IMPORTANTE: completa siempre el texto, nunca lo dejes incompleto. Cambia suficiente para que no parezca copia pero mantén el contexto y veracidad. Tono cercano y curioso. Puede ser de 2 a 5 oraciones según lo requiera el contenido. ${brandName?'Página: '+brandName+'.':''}
+
+Texto original:
+"${currentTitle}"
+
+Responde SOLO con el texto reescrito completo, sin comillas ni explicaciones.`})
     });
     const data=await res.json();
     const newTitle=data.choices?.[0]?.message?.content?.trim()||currentTitle;
     document.getElementById('ed-title-text').value=newTitle;
     state.selectedPost.titleEdited=newTitle;
-    statusEl.textContent='✓ Título reescrito'; statusEl.style.color='var(--green)';
+    statusEl.style.color='var(--green)';
+    statusEl.textContent='✓ Reescrito con éxito';
+
+    // Mostrar comparación original vs nuevo
+    renderTitleComparison(currentTitle, newTitle);
   }catch(e){
     statusEl.textContent='Error: '+e.message; statusEl.style.color='var(--red)';
   }
   btn.disabled=false; btn.innerHTML='🔄 Reescribir viral';
+}
+
+function renderTitleComparison(original, rewritten){
+  const existing = document.getElementById('title-comparison');
+  if(existing) existing.remove();
+
+  const div = document.createElement('div');
+  div.id = 'title-comparison';
+  div.style.cssText='margin-top:12px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border)';
+  div.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+      <div style="padding:12px;background:var(--surface2);border-right:1px solid var(--border)">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Original</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6" id="compare-original-text">${original.substring(0,120)}${original.length>120?'<span class="see-more-btn" onclick="toggleText(this,\'orig\')"> Ver más</span>':''}</div>
+        <div id="compare-original-full" style="display:none;font-size:12px;color:var(--muted);line-height:1.6">${original}<span class="see-more-btn" onclick="toggleText(this,\'orig\')"> Ver menos</span></div>
+      </div>
+      <div style="padding:12px;background:rgba(108,99,255,0.08)">
+        <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">✨ Versión viral</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.6" id="compare-new-text">${rewritten.substring(0,120)}${rewritten.length>120?'<span class="see-more-btn" onclick="toggleText(this,\'new\')"> Ver más</span>':''}</div>
+        <div id="compare-new-full" style="display:none;font-size:12px;color:var(--text);line-height:1.6">${rewritten}<span class="see-more-btn" onclick="toggleText(this,\'new\')"> Ver menos</span></div>
+      </div>
+    </div>`;
+  const titleStatus = document.getElementById('title-status');
+  titleStatus.parentNode.insertBefore(div, titleStatus.nextSibling);
+}
+
+function toggleText(btn, type){
+  if(type==='orig'){
+    const short=document.getElementById('compare-original-text');
+    const full=document.getElementById('compare-original-full');
+    const isShowing=full.style.display==='block';
+    short.style.display=isShowing?'block':'none';
+    full.style.display=isShowing?'none':'block';
+  } else {
+    const short=document.getElementById('compare-new-text');
+    const full=document.getElementById('compare-new-full');
+    const isShowing=full.style.display==='block';
+    short.style.display=isShowing?'block':'none';
+    full.style.display=isShowing?'none':'block';
+  }
 }
 
 function resetTitle(){
