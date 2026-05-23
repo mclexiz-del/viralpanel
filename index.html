@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ViralPanel — Facebook AI</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e0e11;--surface:#16161a;--surface2:#1e1e24;--surface3:#252530;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--text:#f0f0f5;--muted:#7a7a8c;--accent:#6c63ff;--green:#22c55e;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;--radius:10px;--radius-lg:14px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:20px 0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.logo{padding:0 20px 24px;display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.logo-text{font-size:15px;font-weight:600}.logo-sub{font-size:11px;color:var(--muted)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;transition:all 0.15s;border-left:2px solid transparent}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+.nav-item.active{color:var(--text);background:rgba(108,99,255,0.1);border-left-color:var(--accent)}
+.badge{background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:auto}
+.main{overflow-y:auto;padding:28px 32px}
+.section{display:none}.section.active{display:block}
+.page-header{margin-bottom:24px}.page-title{font-size:20px;font-weight:600;margin-bottom:3px}.page-sub{color:var(--muted);font-size:13px}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px}
+.metric-val{font-size:28px;font-weight:600;margin-bottom:2px}.metric-label{font-size:12px;color:var(--muted)}
+.metric-val.blue{color:var(--blue)}.metric-val.amber{color:var(--amber)}.metric-val.green{color:var(--green)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px}
+.card-title{font-size:14px;font-weight:600;margin-bottom:16px}
+label{font-size:12px;color:var(--muted);font-weight:500;display:block;margin-bottom:5px}
+input[type=text],input[type=password],input[type=number],input[type=datetime-local],select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color 0.15s;margin-bottom:12px}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--surface2)}textarea{resize:vertical}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.input-group{display:flex;gap:8px}.input-group input{margin-bottom:0;flex:1}
+.btn{padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover:not(:disabled){background:#7c73ff}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover:not(:disabled){background:#16a34a}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover:not(:disabled){background:#dc2626}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border2)}.btn-ghost:hover:not(:disabled){background:var(--surface3)}
+.btn-sm{padding:5px 12px;font-size:12px}.btn-full{width:100%;justify-content:center}
+.post-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:12px}
+.post-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:border-color 0.2s,transform 0.15s}
+.post-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.post-card-img-wrap{width:100%;height:165px;overflow:hidden;background:var(--surface3);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+.post-card-img-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.zoom-hint{position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.65);color:#fff;font-size:10px;padding:2px 7px;border-radius:6px;opacity:0;transition:opacity 0.2s;pointer-events:none}
+.post-card-img-wrap:hover .zoom-hint{opacity:1}
+.post-card-body{padding:10px 12px}
+.post-card-title{font-size:12px;font-weight:500;line-height:1.5;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.post-card-meta{font-size:11px;color:var(--muted)}
+.post-card-actions{display:flex;gap:6px;padding:0 12px 12px;flex-wrap:wrap}
+.post-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.post-row:last-child{border-bottom:none}
+.thumb{width:60px;height:60px;border-radius:8px;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--surface2);cursor:pointer}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.post-info{flex:1;min-width:0}
+.post-title-row{font-size:13px;font-weight:500;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.post-meta-row{font-size:11px;color:var(--muted)}
+.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px}
+.tag-viral{background:rgba(239,68,68,0.15);color:#fca5a5}
+.tag-pending{background:rgba(245,158,11,0.15);color:#fcd34d}
+.tag-approved{background:rgba(34,197,94,0.15);color:#86efac}
+.tag-scheduled{background:rgba(59,130,246,0.15);color:#93c5fd}
+/* COMPARE */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.compare-box{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.compare-label{font-size:10px;font-weight:700;color:var(--muted);padding:7px 10px;background:var(--surface2);text-transform:uppercase;letter-spacing:0.06em}
+.compare-img-wrap{width:100%;height:260px;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+.compare-img-wrap img{width:100%;height:100%;object-fit:contain;display:block}
+.compare-img-wrap:hover .zoom-hint{opacity:1}
+.compare-placeholder{width:100%;height:260px;display:flex;align-items:center;justify-content:center;font-size:36px;background:var(--surface2);flex-direction:column;gap:10px;color:var(--muted)}
+.compare-placeholder span{font-size:12px}
+/* PROCESSING */
+.processing-wrap{width:100%;height:260px;position:relative;background:#111;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.processing-wrap .orig-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0.2}
+.processing-content{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:10px}
+.processing-content .spin{width:32px;height:32px;border-width:3px}
+.processing-content p{font-size:12px;color:rgba(255,255,255,0.7);text-align:center}
+/* RESULT IMAGE */
+.result-img-wrap{width:100%;height:260px;overflow:hidden;background:#111;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center}
+.result-img-wrap img{width:100%;height:100%;object-fit:contain}
+.result-img-wrap:hover .zoom-hint{opacity:1}
+.img-badge{position:absolute;bottom:8px;right:8px;font-size:10px;padding:3px 10px;border-radius:8px;font-weight:700;pointer-events:none}
+.img-badge-green{background:var(--green);color:#fff}
+/* LIGHTBOX */
+#lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;padding:20px}
+#lightbox.open{display:flex}
+#lightbox-img{max-width:90vw;max-height:84vh;object-fit:contain;border-radius:10px}
+#lightbox-close{position:absolute;top:18px;right:22px;background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:20px;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#lightbox-close:hover{background:rgba(255,255,255,0.2)}
+#lightbox-caption{color:rgba(255,255,255,0.5);font-size:12px;max-width:700px;text-align:center}
+/* DOWNLOAD BTN */
+.download-btn{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);border:none;color:#fff;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;display:none}
+.result-img-wrap:hover .download-btn{display:block}
+/* LOG */
+.log-wrap{background:var(--surface2);border-radius:var(--radius);padding:12px;font-family:'DM Mono',monospace;font-size:11px;max-height:180px;overflow-y:auto}
+.log-line{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.log-ok{color:var(--green)}.log-err{color:var(--red)}.log-info{color:var(--blue)}.log-def{color:var(--muted)}
+.progress{height:3px;background:var(--surface2);border-radius:2px;margin:8px 0;overflow:hidden}
+.progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width 0.5s}
+.ai-result{background:var(--surface2);border-radius:var(--radius);padding:14px;font-size:13px;line-height:1.7;color:var(--muted);white-space:pre-wrap;max-height:200px;overflow-y:auto;margin-top:12px}
+.empty{text-align:center;padding:48px;color:var(--muted)}.empty-icon{font-size:36px;display:block;margin-bottom:12px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:currentColor;border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#fff;color:#111;padding:10px 22px;border-radius:20px;font-size:13px;font-weight:500;z-index:99999;transition:transform 0.3s;pointer-events:none}
+#toast.show{transform:translateX(-50%) translateY(0)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}
+.dot-green{background:var(--green)}.dot-red{background:var(--red)}.dot-amber{background:var(--amber)}
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface3);border:1px solid var(--border2);border-radius:20px;padding:3px 10px 3px 8px;font-size:12px;color:var(--muted);margin:3px}
+.chip-x{cursor:pointer;margin-left:2px}.chip-x:hover{color:var(--red)}
+.sec-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px}
+.divider{height:1px;background:var(--border);margin:16px 0}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.opt-item{display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 10px;background:var(--surface3);border-radius:var(--radius);border:1px solid var(--border)}
+.opt-item input[type=checkbox]{width:auto;margin:0;accent-color:var(--accent)}
+.opt-item span{font-size:12px;color:var(--text)}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div id="lightbox" onclick="lbClick(event)">
+  <button id="lightbox-close" onclick="closeLB()">✕</button>
+  <img id="lightbox-img" src="" alt=""/>
+  <div id="lightbox-caption"></div>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">🔥</div>
+      <div><div class="logo-text">ViralPanel</div><div class="logo-sub">gpt-image-1 + Facebook</div></div>
+    </div>
+    <nav>
+      <div class="nav-item active" onclick="nav('scraper',this)"><span>🌐</span> Scraper</div>
+      <div class="nav-item" onclick="nav('editor',this)"><span>✨</span> Editor IA <span class="badge" id="badge-editor" style="display:none">0</span></div>
+      <div class="nav-item" onclick="nav('aprobacion',this)"><span>✅</span> Aprobación <span class="badge" id="badge-aprobacion" style="display:none">0</span></div>
+      <div class="nav-item" onclick="nav('publicar',this)"><span>📅</span> Publicar</div>
+      <div class="nav-item" onclick="nav('config',this)"><span>⚙️</span> Config</div>
+    </nav>
+    <div style="margin-top:auto;padding:16px 20px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Apify</div>
+      <div style="font-size:12px;font-weight:500;margin-bottom:8px" id="apify-dot"><span class="dot dot-amber"></span>Sin verificar</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:3px">gpt-image-1</div>
+      <div style="font-size:12px;font-weight:500" id="gpt-dot"><span class="dot dot-green"></span>Activo</div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- SCRAPER -->
+    <div id="sec-scraper" class="section active">
+      <div class="page-header">
+        <div class="page-title">Scraper de contenido viral</div>
+        <div class="page-sub">Extrae posts virales de páginas públicas de Facebook</div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><div class="metric-val blue" id="cnt-scraped">0</div><div class="metric-label">Scrapeados</div></div>
+        <div class="metric"><div class="metric-val amber" id="cnt-pending">0</div><div class="metric-label">En aprobación</div></div>
+        <div class="metric"><div class="metric-val green" id="cnt-published">0</div><div class="metric-label">Publicados</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔗 Páginas de Facebook</div>
+        <div class="input-group" style="margin-bottom:8px">
+          <input type="text" id="page-input" placeholder="https://www.facebook.com/bbcnews" style="margin:0"/>
+          <button class="btn btn-primary" onclick="addPage()">+ Agregar</button>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Presiona Enter o clic en Agregar</p>
+        <div id="pages-chips"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🎛 Filtros</div>
+        <div class="form-row3">
+          <div><label>Posts por página</label><input type="number" id="max-posts" value="10" min="1" max="50"/></div>
+          <div><label>Mínimo likes (0=todos)</label><input type="number" id="min-likes" value="0" min="0"/></div>
+          <div><label>Mínimo compartidos (0=todos)</label><input type="number" id="min-shares" value="0" min="0"/></div>
+        </div>
+        <div class="form-row" style="margin-top:-4px">
+          <div><label>Período</label>
+            <select id="period">
+              <option value="1">Últimas 24 horas</option>
+              <option value="7" selected>Últimos 7 días</option>
+              <option value="30">Últimos 30 días</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:flex-end;padding-bottom:12px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--text)">
+              <input type="checkbox" id="scrape-all" style="width:auto;margin:0;accent-color:var(--accent)" onchange="toggleFilters(this)"/>
+              <span style="font-size:13px">Scrapear todo sin filtros</span>
+            </label>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" id="btn-scrape" onclick="startScraping()">▶ Iniciar scraping con Apify</button>
+      </div>
+      <div class="card" id="log-card" style="display:none">
+        <div class="card-title">📋 Registro</div>
+        <div class="log-wrap" id="scrape-log"></div>
+      </div>
+      <div id="scraped-results"></div>
+    </div>
+
+    <!-- EDITOR -->
+    <div id="sec-editor" class="section">
+      <div class="page-header">
+        <div class="page-title">Editor con gpt-image-1</div>
+        <div class="page-sub">Edición real de imagen + reescritura viral de título</div>
+      </div>
+      <div id="editor-empty" class="empty"><span class="empty-icon">✨</span>Scrapeá posts primero para editarlos aquí</div>
+      <div id="editor-list"></div>
+      <div id="editor-detail" style="display:none">
+        <button class="btn btn-ghost btn-sm" onclick="closeDetail()" style="margin-bottom:16px">← Volver a la lista</button>
+        <div class="card">
+          <div class="sec-label">📝 Título / descripción</div>
+          <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">
+            <textarea id="ed-title-text" style="flex:1;height:72px;font-size:13px;margin:0"></textarea>
+            <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+              <button class="btn btn-primary btn-sm" id="btn-rewrite" onclick="rewriteTitle()">🔄 Reescribir viral</button>
+              <button class="btn btn-ghost btn-sm" onclick="resetTitle()">↺ Original</button>
+            </div>
+          </div>
+          <div id="title-status" style="font-size:12px;margin-bottom:10px;display:none"></div>
+          <div class="divider"></div>
+
+          <div class="sec-label" style="margin-top:14px">🖼️ Edición real de imagen con gpt-image-1</div>
+          <div class="compare">
+            <div class="compare-box">
+              <div class="compare-label">Original — clic para ampliar</div>
+              <div id="ed-before"></div>
+            </div>
+            <div class="compare-box">
+              <div class="compare-label">Editado con IA — clic para ampliar y descargar</div>
+              <div id="ed-after"></div>
+            </div>
+          </div>
+
+          <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:14px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:12px">¿Qué editar? gpt-image-1 aplicará estos cambios reales:</div>
+            <div class="opt-grid">
+              <label class="opt-item"><input type="checkbox" id="opt-hd" checked/><span>📈 Mejorar calidad a HD</span></label>
+              <label class="opt-item"><input type="checkbox" id="opt-wm" checked/><span>🚫 Eliminar logos / watermarks</span></label>
+              <label class="opt-item"><input type="checkbox" id="opt-font" checked/><span>🔤 Cambiar fuente de texto</span></label>
+              <label class="opt-item"><input type="checkbox" id="opt-bg"/><span>🌅 Cambiar fondo (mantener sujeto)</span></label>
+            </div>
+            <label style="margin-bottom:5px">Instrucciones adicionales</label>
+            <textarea id="ai-extra" style="height:55px;font-size:12px;margin:0" placeholder="Ej: fuente Helvetica negrita amarilla, fondo más cálido, eliminar marca de agua inferior derecha..."></textarea>
+          </div>
+
+          <button class="btn btn-primary btn-full" id="btn-ai" onclick="runAI()" style="font-size:14px;padding:12px">🤖 Editar imagen con gpt-image-1</button>
+          <div id="ai-progress" style="display:none;margin-top:12px">
+            <div class="progress"><div class="progress-bar" id="ai-pbar" style="width:0%"></div></div>
+            <div id="ai-status" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+          </div>
+          <div id="ai-result" class="ai-result" style="display:none"></div>
+          <div id="ed-actions" style="display:none;gap:8px;justify-content:flex-end;margin-top:16px">
+            <button class="btn btn-danger btn-sm" onclick="rejectEdit()">✕ Descartar</button>
+            <button class="btn btn-ghost btn-sm" id="btn-download-edited" onclick="downloadEdited()">⬇ Descargar imagen</button>
+            <button class="btn btn-success btn-sm" onclick="approveEdit()">✓ Enviar a aprobación</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- APROBACIÓN -->
+    <div id="sec-aprobacion" class="section">
+      <div class="page-header">
+        <div class="page-title">Aprobación de contenido</div>
+        <div class="page-sub">Revisa antes/después y aprueba para publicar</div>
+      </div>
+      <div id="approval-empty" class="empty"><span class="empty-icon">✅</span>No hay posts pendientes</div>
+      <div id="approval-list"></div>
+    </div>
+
+    <!-- PUBLICAR -->
+    <div id="sec-publicar" class="section">
+      <div class="page-header"><div class="page-title">Publicar en Facebook</div></div>
+      <div class="card">
+        <div class="card-title">🔑 Credenciales Facebook</div>
+        <label>Page Access Token</label><input type="password" id="fb-token" placeholder="EAABzbz..."/>
+        <label>ID de tu página</label><input type="text" id="fb-page-id" placeholder="123456789012345"/>
+        <button class="btn btn-ghost" onclick="testFB()">Probar conexión</button>
+        <div id="fb-status" style="margin-top:10px;font-size:13px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📤 Historial</div>
+        <div id="publish-list"><div class="empty" style="padding:24px">No hay posts aún</div></div>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div id="sec-config" class="section">
+      <div class="page-header"><div class="page-title">Configuración</div></div>
+      <div class="card">
+        <div class="card-title">🤖 Apify Token</div>
+        <input type="password" id="apify-token" value="apify_api_QJTjE3ho2GUcotFiHSHRONfDrtKn7b34KDP3"/>
+        <button class="btn btn-ghost btn-sm" onclick="verifyApify()">Verificar</button>
+        <div id="apify-verify" style="margin-top:8px;font-size:12px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🎨 Estilo de marca</div>
+        <div class="form-row">
+          <div><label>Nombre de marca</label><input type="text" id="brand-name" placeholder="Mi Página"/></div>
+          <div><label>Fuente preferida</label><input type="text" id="brand-font" value="Helvetica Neue Bold"/></div>
+        </div>
+        <label>Colores de marca</label>
+        <input type="text" id="brand-colors" placeholder="#FF5733, #C70039"/>
+        <label style="margin-top:4px">Prompt base para edición de imágenes</label>
+        <textarea id="base-img-prompt" style="height:90px">Edita esta imagen manteniendo fielmente el contexto, mensaje y personajes originales. Aplica los cambios indicados con calidad profesional HD. El resultado debe verse natural, de alta calidad y listo para publicar en redes sociales.</textarea>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const APIFY_PROXY = '/api/apify';
+const OPENAI_EDIT_IMG = '/api/openai/edit-image';
+const OPENAI_REWRITE = '/api/openai/rewrite';
+
+let state = {
+  pages:[], posts:[], pendingApproval:[], published:0,
+  selectedPost:null, originalTitle:''
+};
+
+function nav(id,el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('sec-'+id).classList.add('active');
+}
+
+function addPage(){
+  const v=document.getElementById('page-input').value.trim();
+  if(!v) return;
+  if(!v.includes('facebook.com')){toast('Ingresa URL de Facebook válida');return;}
+  if(state.pages.includes(v)){toast('Ya está en la lista');return;}
+  state.pages.push(v); document.getElementById('page-input').value=''; renderChips();
+}
+function removePage(i){state.pages.splice(i,1);renderChips();}
+function renderChips(){
+  document.getElementById('pages-chips').innerHTML=state.pages.map((p,i)=>
+    `<span class="chip">🔵 ${p.replace('https://www.facebook.com/','fb/')} <span class="chip-x" onclick="removePage(${i})">✕</span></span>`
+  ).join('');
+}
+document.getElementById('page-input').addEventListener('keydown',e=>{if(e.key==='Enter')addPage();});
+function toggleFilters(cb){
+  ['min-likes','min-shares'].forEach(id=>{
+    const el=document.getElementById(id); el.disabled=cb.checked; el.style.opacity=cb.checked?'0.4':'1';
+  });
+}
+
+function addLog(msg,type='def'){
+  const c=document.getElementById('scrape-log');
+  const d=document.createElement('div');
+  d.className='log-line log-'+type;
+  d.textContent=new Date().toLocaleTimeString()+' › '+msg;
+  c.appendChild(d); c.scrollTop=c.scrollHeight;
+}
+
+async function startScraping(){
+  if(!state.pages.length){toast('Agrega al menos una página');return;}
+  const token=document.getElementById('apify-token').value;
+  const maxPosts=parseInt(document.getElementById('max-posts').value)||10;
+  const scrapeAll=document.getElementById('scrape-all').checked;
+  const minLikes=scrapeAll?0:(parseInt(document.getElementById('min-likes').value)||0);
+  const minShares=scrapeAll?0:(parseInt(document.getElementById('min-shares').value)||0);
+  const btn=document.getElementById('btn-scrape');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Scrapeando...';
+  document.getElementById('log-card').style.display='block';
+  document.getElementById('scrape-log').innerHTML='';
+  state.posts=[];
+
+  for(const pageUrl of state.pages){
+    addLog('Conectando: '+pageUrl,'info');
+    try{
+      const runRes=await fetch(APIFY_PROXY+'/v2/acts/apify~facebook-posts-scraper/runs?token='+token,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({startUrls:[{url:pageUrl}],resultsLimit:maxPosts,scrapeAboutPage:false,scrapeReviews:false})
+      });
+      const runData=await runRes.json();
+      const runId=runData.data?.id;
+      if(!runId){addLog('Error: '+(runData.error?.message||JSON.stringify(runData)),'err');continue;}
+      addLog('Actor iniciado: '+runId,'ok');
+      let attempts=0,finished=false,status='';
+      while(attempts<50&&!finished){
+        await sleep(4000);
+        const sRes=await fetch(APIFY_PROXY+'/v2/actor-runs/'+runId+'?token='+token);
+        const sData=await sRes.json();
+        status=sData.data?.status||'';
+        if(!['RUNNING','READY'].includes(status)) addLog('Estado: '+status,status==='SUCCEEDED'?'ok':status==='FAILED'?'err':'info');
+        if(status==='SUCCEEDED') finished=true;
+        else if(['FAILED','ABORTED','TIMED-OUT'].includes(status)) break;
+        attempts++;
+      }
+      if(!finished){addLog('Actor no completó ('+status+')','err');continue;}
+      const dsId=runData.data?.defaultDatasetId;
+      const itemsRes=await fetch(APIFY_PROXY+'/v2/datasets/'+dsId+'/items?token='+token+'&limit='+maxPosts);
+      const items=await itemsRes.json();
+      addLog('Posts recibidos: '+items.length,'ok');
+      let added=0;
+      for(const item of items){
+        const reactions=item.likes||item.reactionsCount||0;
+        const shares=item.shares||item.sharesCount||0;
+        if(reactions<minLikes||shares<minShares) continue;
+        const imgUrl=item.media?.[0]?.thumbnail||item.media?.[0]?.url||item.topImage||'';
+        state.posts.push({
+          id:item.postId||(Date.now()+Math.random()).toString(36),
+          page:pageUrl, title:item.text?.substring(0,300)||'Post sin texto',
+          titleEdited:'', imageUrl:imgUrl, imageEdited:'',
+          reactions,shares, comments:item.comments||item.commentsCount||0,
+          postUrl:item.url||'', date:item.time?new Date(item.time).toLocaleDateString('es-MX'):'',
+          status:'scraped', aiImproved:false, aiDescription:''
+        });
+        added++;
+      }
+      addLog('Agregados: '+added,'ok');
+    }catch(err){addLog('Error: '+err.message,'err');}
+  }
+  addLog('✓ Total: '+state.posts.length,'ok');
+  renderScrapedResults(); renderEditorList(); updateCounters();
+  updateApifyDot(true);
+  btn.disabled=false; btn.innerHTML='🔄 Scrapear de nuevo';
+}
+
+function cardImg(imageUrl,title){
+  if(!imageUrl) return `<div class="post-card-img-wrap" style="cursor:default;font-size:36px">📷</div>`;
+  return `<div class="post-card-img-wrap" onclick="openLB('${esc(imageUrl)}','${esc(title)}')">
+    <img src="${imageUrl}" onerror="this.parentElement.innerHTML='<span style=font-size:36px>📷</span>'"/>
+    <span class="zoom-hint">🔍 Ampliar</span></div>`;
+}
+
+function renderScrapedResults(){
+  const c=document.getElementById('scraped-results');
+  if(!state.posts.length){c.innerHTML='';return;}
+  c.innerHTML=`<div class="card"><div class="card-title">📋 Posts encontrados (${state.posts.length})</div>
+  <div class="post-grid">${state.posts.map(p=>`
+    <div class="post-card">
+      ${cardImg(p.imageUrl,p.title)}
+      <div class="post-card-body">
+        <div class="post-card-title">${p.title.substring(0,90)}</div>
+        <div class="post-card-meta">❤️ ${p.reactions.toLocaleString()} · 🔄 ${p.shares.toLocaleString()} · ${p.date}</div>
+      </div>
+      <div class="post-card-actions">
+        <span class="tag tag-viral">Viral</span>
+        <button class="btn btn-primary btn-sm" onclick="goToEditor('${p.id}')">Editar →</button>
+      </div>
+    </div>`).join('')}</div></div>`;
+}
+
+function renderEditorList(){
+  const c=document.getElementById('editor-list');
+  const e=document.getElementById('editor-empty');
+  const b=document.getElementById('badge-editor');
+  const pending=state.posts.filter(p=>p.status==='scraped');
+  if(!pending.length){e.style.display='block';c.innerHTML='';b.style.display='none';return;}
+  e.style.display='none'; b.style.display='inline-block'; b.textContent=pending.length;
+  c.innerHTML=`<div class="card"><div class="card-title">✨ Listos para editar (${pending.length})</div>
+  <div class="post-grid">${pending.map(p=>`
+    <div class="post-card">
+      ${cardImg(p.imageEdited||p.imageUrl,p.titleEdited||p.title)}
+      <div class="post-card-body">
+        <div class="post-card-title">${(p.titleEdited||p.title).substring(0,90)}</div>
+        <div class="post-card-meta">❤️ ${p.reactions.toLocaleString()} · ${p.date}</div>
+      </div>
+      <div class="post-card-actions" style="width:100%">
+        <button class="btn btn-primary btn-sm btn-full" onclick="openDetail('${p.id}')">🤖 Editar con gpt-image-1</button>
+      </div>
+    </div>`).join('')}</div></div>`;
+}
+
+function goToEditor(id){
+  document.querySelectorAll('.nav-item')[1].click();
+  setTimeout(()=>openDetail(id),60);
+}
+
+function openDetail(id){
+  state.selectedPost=state.posts.find(p=>String(p.id)===String(id));
+  if(!state.selectedPost) return;
+  state.originalTitle=state.selectedPost.title;
+  document.getElementById('editor-list').style.display='none';
+  document.getElementById('editor-empty').style.display='none';
+  document.getElementById('editor-detail').style.display='block';
+  document.getElementById('ed-title-text').value=state.selectedPost.titleEdited||state.selectedPost.title;
+  document.getElementById('title-status').style.display='none';
+  // Before
+  const beforeWrap=document.getElementById('ed-before');
+  if(state.selectedPost.imageUrl){
+    beforeWrap.innerHTML=`<div class="compare-img-wrap" onclick="openLB('${esc(state.selectedPost.imageUrl)}','Original')">
+      <img src="${state.selectedPost.imageUrl}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>📷<span>Sin imagen</span></div>'"/>
+      <span class="zoom-hint">🔍 Ampliar</span></div>`;
+  } else {
+    beforeWrap.innerHTML=`<div class="compare-placeholder">📷<span>Sin imagen</span></div>`;
+  }
+  // After
+  document.getElementById('ed-after').innerHTML=`<div class="compare-placeholder">🤖<span>Presiona "Editar con gpt-image-1"</span></div>`;
+  document.getElementById('ai-progress').style.display='none';
+  document.getElementById('ai-result').style.display='none';
+  document.getElementById('ed-actions').style.display='none';
+  document.getElementById('ai-extra').value='';
+  document.getElementById('btn-ai').disabled=false;
+  document.getElementById('btn-ai').innerHTML='🤖 Editar imagen con gpt-image-1';
+}
+
+function closeDetail(){
+  document.getElementById('editor-detail').style.display='none';
+  document.getElementById('editor-list').style.display='block';
+  state.selectedPost=null;
+}
+
+async function rewriteTitle(){
+  if(!state.selectedPost) return;
+  const currentTitle=document.getElementById('ed-title-text').value;
+  const btn=document.getElementById('btn-rewrite');
+  const statusEl=document.getElementById('title-status');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  statusEl.style.display='block'; statusEl.style.color='var(--muted)'; statusEl.textContent='Reescribiendo con GPT-4o...';
+  const brandName=document.getElementById('brand-name').value;
+  try{
+    const res=await fetch(OPENAI_REWRITE,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt:`Reescribe este título/descripción de noticia de forma viral para Facebook en español latino. Cambia suficiente para que no parezca copia pero mantén contexto y veracidad. Tono cercano y curioso. Máximo 2-3 oraciones. ${brandName?'Página: '+brandName+'.':''} Título original: "${currentTitle}"\n\nResponde SOLO con el texto reescrito.`})
+    });
+    const data=await res.json();
+    const newTitle=data.choices?.[0]?.message?.content?.trim()||currentTitle;
+    document.getElementById('ed-title-text').value=newTitle;
+    state.selectedPost.titleEdited=newTitle;
+    statusEl.textContent='✓ Título reescrito'; statusEl.style.color='var(--green)';
+  }catch(e){
+    statusEl.textContent='Error: '+e.message; statusEl.style.color='var(--red)';
+  }
+  btn.disabled=false; btn.innerHTML='🔄 Reescribir viral';
+}
+
+function resetTitle(){
+  if(!state.selectedPost) return;
+  document.getElementById('ed-title-text').value=state.originalTitle;
+  state.selectedPost.titleEdited='';
+  document.getElementById('title-status').style.display='none';
+}
+
+async function runAI(){
+  if(!state.selectedPost) return;
+  if(!state.selectedPost.imageUrl){toast('Este post no tiene imagen');return;}
+
+  const optHD=document.getElementById('opt-hd').checked;
+  const optWM=document.getElementById('opt-wm').checked;
+  const optFont=document.getElementById('opt-font').checked;
+  const optBG=document.getElementById('opt-bg').checked;
+  const extra=document.getElementById('ai-extra').value.trim();
+  const brandFont=document.getElementById('brand-font')?.value||'Helvetica Neue Bold';
+  const brandColors=document.getElementById('brand-colors')?.value||'';
+  const basePrompt=document.getElementById('base-img-prompt').value;
+
+  const btn=document.getElementById('btn-ai');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> gpt-image-1 editando...';
+  document.getElementById('ai-progress').style.display='block';
+  document.getElementById('ai-result').style.display='none';
+  document.getElementById('ed-actions').style.display='none';
+
+  // Mostrar overlay procesando
+  document.getElementById('ed-after').innerHTML=`
+    <div class="processing-wrap">
+      <img class="orig-img" src="${state.selectedPost.imageUrl}" onerror="this.style.display='none'"/>
+      <div class="processing-content">
+        <span class="spin"></span>
+        <p>gpt-image-1 editando imagen...<br><span style="font-size:11px;opacity:0.6">Esto tarda ~20-40 segundos</span></p>
+      </div>
+    </div>`;
+
+  const steps=[[10,'Enviando imagen a OpenAI...'],[30,'gpt-image-1 analizando...'],[55,'Aplicando ediciones...'],[80,'Generando resultado HD...'],[100,'¡Imagen lista!']];
+  const stepInterval=setInterval(()=>{
+    const current=steps.shift();
+    if(current){
+      document.getElementById('ai-pbar').style.width=current[0]+'%';
+      document.getElementById('ai-status').textContent=current[1];
+    }
+  },5000);
+
+  // Construir prompt detallado
+  const edits=[];
+  if(optHD) edits.push('improve image quality and resolution to HD, make it crisp and sharp');
+  if(optWM) edits.push('remove any visible logos, watermarks, or brand marks without affecting the main content');
+  if(optFont) edits.push(`change any text in the image to use ${brandFont} font`);
+  if(optBG) edits.push('change the background to something more visually appealing while keeping the main subject completely intact');
+  if(brandColors) edits.push(`apply color palette: ${brandColors}`);
+  if(extra) edits.push(extra);
+
+  const fullPrompt=`${basePrompt}
+
+Apply these specific edits to this image:
+${edits.length?edits.map((e,i)=>`${i+1}. ${e}`).join('\n'):'1. Improve overall quality and visual appeal'}
+
+Keep all people, text content, and main subjects exactly as they are. Only apply the requested visual improvements.`;
+
+  try{
+    const res=await fetch(OPENAI_EDIT_IMG,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({imageUrl:state.selectedPost.imageUrl, prompt:fullPrompt})
+    });
+    clearInterval(stepInterval);
+    document.getElementById('ai-pbar').style.width='100%';
+    document.getElementById('ai-status').textContent='¡Imagen lista!';
+
+    const data=await res.json();
+    if(data.error) throw new Error(data.error.message||JSON.stringify(data.error));
+
+    // La imagen viene en base64
+    const imgData=data.data?.[0];
+    let editedImgSrc='';
+    if(imgData?.b64_json){
+      editedImgSrc=`data:image/png;base64,${imgData.b64_json}`;
+    } else if(imgData?.url){
+      editedImgSrc=imgData.url;
+    } else {
+      throw new Error('No se recibió imagen del API');
+    }
+
+    state.selectedPost.imageEdited=editedImgSrc;
+    state.selectedPost.aiImproved=true;
+
+    // Mostrar imagen editada real
+    document.getElementById('ed-after').innerHTML=`
+      <div class="result-img-wrap" onclick="openLB('${esc(editedImgSrc)}','Editado con gpt-image-1')">
+        <img src="${editedImgSrc}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌<span>Error mostrando imagen</span></div>'"/>
+        <span class="zoom-hint">🔍 Ampliar</span>
+        <span class="img-badge img-badge-green">✓ gpt-image-1</span>
+      </div>`;
+
+    document.getElementById('ai-result').style.display='block';
+    document.getElementById('ai-result').innerHTML=`<span style="color:var(--green);font-weight:600">✓ Imagen editada exitosamente con gpt-image-1</span>\n\nCambios aplicados:\n${edits.map(e=>'• '+e).join('\n')||'• Mejora general de calidad'}`;
+    document.getElementById('btn-download-edited').style.display='inline-flex';
+
+  }catch(e){
+    clearInterval(stepInterval);
+    state.selectedPost.aiImproved=true;
+    document.getElementById('ed-after').innerHTML=`<div class="compare-placeholder">❌<span style="font-size:11px;padding:0 16px;text-align:center">${e.message}</span></div>`;
+    document.getElementById('ai-result').style.display='block';
+    document.getElementById('ai-result').innerHTML=`<span style="color:var(--red)">❌ Error: ${e.message}</span>\n\nPosibles causas:\n• Sin saldo en OpenAI (verifica en platform.openai.com/billing)\n• La imagen no es accesible públicamente\n• Timeout — intenta de nuevo`;
+  }
+
+  document.getElementById('ed-actions').style.display='flex';
+  btn.disabled=false; btn.innerHTML='🤖 Volver a editar';
+  updateCounters();
+}
+
+function downloadEdited(){
+  if(!state.selectedPost?.imageEdited) return;
+  const a=document.createElement('a');
+  a.href=state.selectedPost.imageEdited;
+  a.download=`viral-editada-${Date.now()}.png`;
+  a.click();
+}
+
+function approveEdit(){
+  if(!state.selectedPost) return;
+  state.selectedPost.titleEdited=document.getElementById('ed-title-text').value;
+  state.selectedPost.status='pending_approval';
+  state.pendingApproval.push({...state.selectedPost});
+  closeDetail(); renderEditorList(); renderApprovalList(); updateCounters();
+  toast('Post enviado a aprobación ✓');
+}
+function rejectEdit(){closeDetail();}
+
+function renderApprovalList(){
+  const c=document.getElementById('approval-list');
+  const e=document.getElementById('approval-empty');
+  const b=document.getElementById('badge-aprobacion');
+  const pending=state.pendingApproval.filter(p=>p.status==='pending_approval');
+  b.style.display=pending.length?'inline-block':'none'; b.textContent=pending.length;
+  if(!pending.length){e.style.display='block';c.innerHTML='';return;}
+  e.style.display='none';
+  c.innerHTML=pending.map(p=>`
+    <div class="card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:600;flex:1;line-height:1.5">${(p.titleEdited||p.title).substring(0,130)}</div>
+        <span class="tag tag-pending">Pendiente</span>
+      </div>
+      <div class="compare">
+        <div class="compare-box">
+          <div class="compare-label">Original</div>
+          ${p.imageUrl?`<div class="compare-img-wrap" onclick="openLB('${esc(p.imageUrl)}','Original')"><img src="${p.imageUrl}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>📷</div>'"/><span class="zoom-hint">🔍 Ampliar</span></div>`:`<div class="compare-placeholder">📷</div>`}
+        </div>
+        <div class="compare-box">
+          <div class="compare-label">Editado con gpt-image-1</div>
+          ${p.imageEdited?`<div class="compare-img-wrap" onclick="openLB('${esc(p.imageEdited)}','Editado')"><img src="${p.imageEdited}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌</div>'"/><span class="zoom-hint">🔍 Ampliar</span><span class="img-badge img-badge-green">✓ AI</span></div>`:`<div class="compare-placeholder">📷<span>Sin editar</span></div>`}
+        </div>
+      </div>
+      <label>Caption</label>
+      <textarea id="cap-${p.id}" style="height:80px;margin-bottom:12px">${(p.titleEdited||p.title).substring(0,120)} 🔥\n\n¡Comparte si te sorprendió!</textarea>
+      <div style="margin-bottom:14px"><label>Programar (opcional)</label><input type="datetime-local" id="sched-${p.id}" style="margin:0"/></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-danger btn-sm" onclick="rejectPost('${p.id}')">✕ Rechazar</button>
+        <button class="btn btn-ghost btn-sm" onclick="schedulePost('${p.id}')">📅 Programar</button>
+        <button class="btn btn-success btn-sm" onclick="publishPost('${p.id}')">🚀 Publicar ahora</button>
+      </div>
+    </div>`).join('');
+}
+
+function rejectPost(id){
+  const p=state.pendingApproval.find(x=>String(x.id)===String(id));
+  if(p) p.status='rejected';
+  renderApprovalList(); updateCounters(); toast('Post rechazado');
+}
+async function schedulePost(id){
+  const p=state.pendingApproval.find(x=>String(x.id)===String(id));
+  const sched=document.getElementById('sched-'+id)?.value;
+  const token=document.getElementById('fb-token').value;
+  const pageId=document.getElementById('fb-page-id').value;
+  const caption=document.getElementById('cap-'+id)?.value||p.titleEdited||p.title;
+  const imageSrc=p.imageEdited||p.imageUrl||'';
+  if(!sched){toast('Selecciona fecha y hora');return;}
+  if(!token||!pageId){toast('Configura el token y page ID en Publicar');return;}
+  const schedDate=new Date(sched);
+  if(schedDate<=new Date()){toast('La fecha debe ser en el futuro');return;}
+
+  const btn=document.querySelector(`[onclick="schedulePost('${id}')"]`);
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span> Programando...';}
+
+  try{
+    const res=await fetch('/api/schedule-post',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({postId:id,pageId,token,caption,imageSrc,scheduledAt:sched})
+    });
+    const data=await res.json();
+    if(data.success){
+      if(p){p.status='scheduled';p.scheduledAt=sched;}
+      renderApprovalList(); renderPublishList(); updateCounters();
+      toast('📅 Programado para: '+schedDate.toLocaleString('es-MX'));
+    } else {
+      toast('Error: '+(data.error||'No se pudo programar'));
+      if(btn){btn.disabled=false;btn.innerHTML='📅 Programar';}
+    }
+  }catch(e){
+    toast('Error: '+e.message);
+    if(btn){btn.disabled=false;btn.innerHTML='📅 Programar';}
+  }
+}
+async function publishPost(id){
+  const p=state.pendingApproval.find(x=>String(x.id)===String(id));
+  const token=document.getElementById('fb-token').value;
+  const pageId=document.getElementById('fb-page-id').value;
+  const caption=document.getElementById('cap-'+id)?.value||p.titleEdited||p.title;
+  const imageSrc=p.imageEdited||p.imageUrl||'';
+  if(!token||!pageId){
+    toast('Configura el token y page ID en la pestaña Publicar');return;
+  }
+  const btn=document.querySelector(`[onclick="publishPost('${id}')"]`);
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span> Publicando...';}
+  toast('Subiendo imagen y publicando...');
+  try{
+    const res=await fetch('/api/publish-facebook',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pageId,token,caption,imageSrc})
+    });
+    const data=await res.json();
+    if(data.id||data.post_id){
+      if(p){p.status='published';state.published++;}
+      renderApprovalList(); renderPublishList(); updateCounters();
+      toast('🎉 ¡Publicado en Facebook exitosamente!');
+    } else {
+      toast('Error FB: '+(data.error?.message||JSON.stringify(data)));
+      if(btn){btn.disabled=false;btn.innerHTML='🚀 Publicar ahora';}
+    }
+  }catch(e){
+    toast('Error: '+e.message);
+    if(btn){btn.disabled=false;btn.innerHTML='🚀 Publicar ahora';}
+  }
+}
+function renderPublishList(){
+  const c=document.getElementById('publish-list');
+  const done=state.pendingApproval.filter(p=>p.status==='published'||p.status==='scheduled');
+  if(!done.length){c.innerHTML='<div class="empty" style="padding:24px">No hay posts aún</div>';return;}
+  c.innerHTML=done.map(p=>`
+    <div class="post-row">
+      <div class="thumb" onclick="openLB('${esc(p.imageEdited||p.imageUrl)}','')">${(p.imageEdited||p.imageUrl)?`<img src="${p.imageEdited||p.imageUrl}" onerror="this.parentElement.textContent='📷'"/>`:'📷'}</div>
+      <div class="post-info">
+        <div class="post-title-row">${(p.titleEdited||p.title).substring(0,70)}...</div>
+        <div class="post-meta-row">${p.status==='scheduled'?'⏰ Se publica: '+new Date(p.scheduledAt).toLocaleString('es-MX'):'✅ Publicado en Facebook'}</div>
+      </div>
+      <span class="tag ${p.status==='scheduled'?'tag-scheduled':'tag-approved'}">${p.status==='scheduled'?'Programado':'Publicado'}</span>
+    </div>`).join('');
+}
+
+// Revisar estado de posts programados cada minuto
+setInterval(async()=>{
+  if(!state.pendingApproval.some(p=>p.status==='scheduled')) return;
+  try{
+    const res=await fetch('/api/scheduled-status');
+    const data=await res.json();
+    let changed=false;
+    for(const sp of data.posts){
+      const local=state.pendingApproval.find(p=>String(p.id)===String(sp.postId));
+      if(local && sp.status==='published' && local.status==='scheduled'){
+        local.status='published';
+        state.published++;
+        changed=true;
+        toast('🎉 Post programado publicado en Facebook!');
+      }
+    }
+    if(changed){ renderApprovalList(); renderPublishList(); updateCounters(); }
+  }catch(e){}
+}, 60000);
+
+async function testFB(){
+  const token=document.getElementById('fb-token').value;
+  const pageId=document.getElementById('fb-page-id').value;
+  const s=document.getElementById('fb-status');
+  if(!token||!pageId){s.innerHTML='<span style="color:var(--red)">Ingresa token e ID</span>';return;}
+  s.textContent='Probando...';
+  try{
+    const res=await fetch(`https://graph.facebook.com/${pageId}?fields=name,fan_count&access_token=${token}`);
+    const data=await res.json();
+    if(data.name) s.innerHTML=`<span style="color:var(--green)"><span class="dot dot-green"></span>Conectado: <strong>${data.name}</strong>${data.fan_count?' · '+data.fan_count.toLocaleString()+' seguidores':''}</span>`;
+    else s.innerHTML=`<span style="color:var(--red)">Error: ${data.error?.message||'Token inválido'}</span>`;
+  }catch(e){s.innerHTML=`<span style="color:var(--red)">Error</span>`;}
+}
+
+async function verifyApify(){
+  const token=document.getElementById('apify-token').value;
+  const s=document.getElementById('apify-verify');
+  s.textContent='Verificando...';
+  try{
+    const res=await fetch(APIFY_PROXY+'/v2/users/me?token='+token);
+    const data=await res.json();
+    if(data.data?.username){
+      s.innerHTML=`<span style="color:var(--green)">✓ Conectado: ${data.data.username}</span>`;
+      updateApifyDot(true);
+    } else s.innerHTML=`<span style="color:var(--red)">Token inválido</span>`;
+  }catch(e){s.innerHTML=`<span style="color:var(--red)">Error: ${e.message}</span>`;}
+}
+function updateApifyDot(ok){
+  document.getElementById('apify-dot').innerHTML=ok?'<span class="dot dot-green"></span>Conectado':'<span class="dot dot-red"></span>Error';
+}
+
+function openLB(url,caption){
+  if(!url) return;
+  document.getElementById('lightbox-img').src=url;
+  document.getElementById('lightbox-caption').textContent=caption||'';
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLB(){document.getElementById('lightbox').classList.remove('open');}
+function lbClick(e){if(e.target===document.getElementById('lightbox'))closeLB();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLB();});
+
+function updateCounters(){
+  document.getElementById('cnt-scraped').textContent=state.posts.length;
+  document.getElementById('cnt-pending').textContent=state.pendingApproval.filter(p=>p.status==='pending_approval').length;
+  document.getElementById('cnt-published').textContent=state.pendingApproval.filter(p=>p.status==='published').length;
+}
+function esc(s){return(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')}
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3200);
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+// ---- GUARDAR Y CARGAR CONFIGURACION ----
+function saveConfig(){
+  const cfg = {
+    fbToken: document.getElementById('fb-token')?.value||'',
+    fbPageId: document.getElementById('fb-page-id')?.value||'',
+    apifyToken: document.getElementById('apify-token')?.value||'',
+    brandName: document.getElementById('brand-name')?.value||'',
+    brandFont: document.getElementById('brand-font')?.value||'',
+    brandColors: document.getElementById('brand-colors')?.value||'',
+    baseImgPrompt: document.getElementById('base-img-prompt')?.value||''
+  };
+  localStorage.setItem('viralpanel_config', JSON.stringify(cfg));
+}
+
+function loadConfig(){
+  try {
+    const saved = localStorage.getItem('viralpanel_config');
+    if(!saved) return;
+    const cfg = JSON.parse(saved);
+    if(cfg.fbToken && document.getElementById('fb-token')) document.getElementById('fb-token').value = cfg.fbToken;
+    if(cfg.fbPageId && document.getElementById('fb-page-id')) document.getElementById('fb-page-id').value = cfg.fbPageId;
+    if(cfg.apifyToken && document.getElementById('apify-token')) document.getElementById('apify-token').value = cfg.apifyToken;
+    if(cfg.brandName && document.getElementById('brand-name')) document.getElementById('brand-name').value = cfg.brandName;
+    if(cfg.brandFont && document.getElementById('brand-font')) document.getElementById('brand-font').value = cfg.brandFont;
+    if(cfg.brandColors && document.getElementById('brand-colors')) document.getElementById('brand-colors').value = cfg.brandColors;
+    if(cfg.baseImgPrompt && document.getElementById('base-img-prompt')) document.getElementById('base-img-prompt').value = cfg.baseImgPrompt;
+    if(cfg.fbToken && cfg.fbPageId) {
+      document.getElementById('fb-status').innerHTML='<span style="color:var(--green)"><span class="dot dot-green"></span>Token cargado automáticamente</span>';
+    }
+    if(cfg.apifyToken) updateApifyDot(true);
+  } catch(e){ console.log('Error cargando config:', e); }
+}
+
+// Auto-guardar cuando cambian los campos
+document.addEventListener('DOMContentLoaded', () => {
+  loadConfig();
+  ['fb-token','fb-page-id','apify-token','brand-name','brand-font','brand-colors','base-img-prompt'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('change', saveConfig);
+  });
+});
+
+// Cargar al iniciar
+loadConfig();
+</script>
+</body>
+</html>
