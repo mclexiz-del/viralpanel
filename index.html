@@ -413,26 +413,11 @@ select option{background:var(--surface2)}textarea{resize:vertical}
           </div>
 
           <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:14px">
-            <div style="font-size:12px;font-weight:600;margin-bottom:12px">¿Qué editar? gpt-image-1 aplicará estos cambios reales:</div>
-            <div class="opt-grid">
-              <label class="opt-item"><input type="checkbox" id="opt-hd" checked/><span>📈 Mejorar calidad a HD</span></label>
-              <label class="opt-item"><input type="checkbox" id="opt-wm" checked/><span>🚫 Eliminar logos / watermarks</span></label>
-              <label class="opt-item"><input type="checkbox" id="opt-font" checked/><span>🔤 Cambiar fuente de texto</span></label>
-              <label class="opt-item"><input type="checkbox" id="opt-bg"/><span>🌅 Cambiar fondo (mantener sujeto)</span></label>
-            </div>
-            <label style="margin-bottom:5px">Instrucciones adicionales</label>
-            <textarea id="ai-extra" style="height:55px;font-size:12px;margin:0" placeholder="Ej: fuente Helvetica negrita amarilla, fondo más cálido, eliminar marca de agua inferior derecha..."></textarea>
+            <div style="font-size:12px;font-weight:600;margin-bottom:8px">✍️ ¿Qué quieres cambiar? Escribe tus instrucciones:</div>
+            <textarea id="ai-extra" style="height:150px;font-size:13px;margin:0;width:100%" placeholder="Ejemplos:&#10;- Quita el logo de la esquina inferior derecha&#10;- Cambia la fuente del texto a Helvetica Bold negrita amarilla&#10;- Mejora la calidad a HD&#10;- Cambia el fondo a gradiente oscuro manteniendo las personas&#10;- Agrega bordes redondeados a las capturas de pantalla"></textarea>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0">
-            <button class="btn btn-primary btn-full" id="btn-ai-auto" onclick="runAIAuto()" style="font-size:13px;padding:12px;background:linear-gradient(135deg,#6c63ff,#a78bfa)">
-              🧠 Auto-editar con IA
-            </button>
-            <button class="btn btn-ghost btn-full" id="btn-ai" onclick="runAI()" style="font-size:13px;padding:12px">
-              🎛️ Editar manual
-            </button>
-          </div>
-          <p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Auto-editar analiza la imagen y decide qué cambiar automáticamente</p>
+          <button class="btn btn-primary btn-full" id="btn-ai" onclick="runAI()" style="font-size:14px;padding:12px">🤖 Editar imagen con gpt-image-1</button>
           <div id="ai-progress" style="display:none;margin-top:12px">
             <div class="progress"><div class="progress-bar" id="ai-pbar" style="width:0%"></div></div>
             <div id="ai-status" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
@@ -1061,11 +1046,8 @@ async function runAI(){
   if(!state.selectedPost) return;
   if(!state.selectedPost.imageUrl){toast('Este post no tiene imagen');return;}
 
-  const optHD=document.getElementById('opt-hd').checked;
-  const optWM=document.getElementById('opt-wm').checked;
-  const optFont=document.getElementById('opt-font').checked;
-  const optBG=document.getElementById('opt-bg').checked;
   const extra=document.getElementById('ai-extra').value.trim();
+  if(!extra){toast('Escribe las instrucciones para editar la imagen');return;}
   const brandFont=document.getElementById('brand-font')?.value||'Helvetica Neue Bold';
   const brandColors=document.getElementById('brand-colors')?.value||'';
   const basePrompt=document.getElementById('base-img-prompt').value;
@@ -1104,12 +1086,7 @@ async function runAI(){
   if(brandColors) edits.push(`apply color palette: ${brandColors}`);
   if(extra) edits.push(extra);
 
-  const fullPrompt=`${basePrompt}
-
-Apply these specific edits to this image:
-${edits.length?edits.map((e,i)=>`${i+1}. ${e}`).join('\n'):'1. Improve overall quality and visual appeal'}
-
-Keep all people, text content, and main subjects exactly as they are. Only apply the requested visual improvements.`;
+  const fullPrompt=extra;
 
   try{
     const res=await fetch(OPENAI_EDIT_IMG,{
