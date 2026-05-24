@@ -495,8 +495,8 @@ select option{background:var(--surface2)}textarea{resize:vertical}
         </div>
         <label>Colores de marca</label>
         <input type="text" id="brand-colors" placeholder="#FF5733, #C70039"/>
-        <label style="margin-top:4px">Prompt base para edición de imágenes</label>
-        <textarea id="base-img-prompt" style="height:90px">Edita esta imagen manteniendo fielmente el contexto, mensaje y personajes originales. Aplica los cambios indicados con calidad profesional HD. El resultado debe verse natural, de alta calidad y listo para publicar en redes sociales.</textarea>
+        <label style="margin-top:4px">Prompt base para edición de imágenes (manual)</label>
+        <textarea id="base-img-prompt" style="height:90px">Subtly redesign this image while keeping all people, faces, text content, and main subjects completely intact. Apply professional quality improvements: enhance to HD, remove watermarks if present, improve visual appeal for social media. Keep all changes subtle and natural — same image, slightly better version.</textarea>
       </div>
     </div>
 
@@ -900,29 +900,53 @@ async function runAIAuto(){
 
   try {
     // PASO 1: GPT-4o analiza la imagen y decide qué editar
-    const analysisPrompt = `You are an expert image editor and social media specialist. Analyze this viral Facebook post image carefully and decide what changes would make it more professional, unique, and engaging.
+    const analysisPrompt = `You are a PROFESSIONAL IMAGE REDESIGNER specialized in viral Facebook content. Your job is to subtly redesign images to make them look slightly different from the original while keeping the full context, message, and main subjects completely intact.
 
-Image URL: ${state.selectedPost.imageUrl}
-Post text: "${state.selectedPost.title.substring(0,200)}"
-${brandName ? 'Brand: '+brandName : ''}
-${brandColors ? 'Brand colors: '+brandColors : ''}
+PHILOSOPHY: Make small but impactful changes. The image should feel refreshed and more professional, not completely different. Think like a designer doing a light rebrand — not a full remake.
 
-Analyze the image and respond ONLY with a valid JSON object (no markdown, no explanation):
+Image to analyze:
+- URL: ${state.selectedPost.imageUrl}
+- Post context: "${state.selectedPost.title.substring(0,200)}"
+${brandName ? '- Brand name: '+brandName : ''}
+${brandColors ? '- Brand colors to apply: '+brandColors : ''}
+- Preferred font: ${brandFont}
+
+ANALYZE the image deeply and decide which of these subtle changes apply:
+
+1. WATERMARKS/LOGOS: Are there any visible watermarks, channel logos, or brand marks from other pages? They must be cleanly removed.
+2. IMAGE QUALITY: Always enhance to HD — sharpen details, reduce noise, improve clarity.
+3. SCREENSHOT BORDERS: If the image contains screenshots of posts or messages inside a square/rectangle, add rounded corners (border-radius effect) to those inner elements.
+4. BACKGROUND: Does the background distract from the main subject? Apply a subtle improvement — slightly blur, add gradient, or clean it up. NEVER change it completely if people/subjects are present.
+5. PHOTO FILTER: Apply a subtle professional filter — slightly boost saturation and contrast to make it more vibrant and eye-catching for social media. Keep it natural, not over-processed.
+6. TEXT FONTS: If there are large text overlays (titles, captions on the image), change them to ${brandFont}. Keep the exact same text content, just improve the typography.
+7. CLOTHING COLORS: If there are people and their clothing color is plain/generic, you MAY slightly shift the hue to make it more visually interesting. SUBTLE change only.
+8. COMPOSITION: Minor cropping or framing adjustments if it improves visual balance.
+
+RULES:
+- NEVER change faces, people's features, or identities
+- NEVER alter the meaning or message of the image
+- NEVER add new elements that weren't there
+- NEVER change text content, only typography style
+- Keep ALL changes subtle — 20% different, 80% same
+- The goal is: same image, slightly better version
+
+Respond ONLY with a valid JSON object (no markdown, no code blocks):
 {
+  "main_subject": "detailed description of main subject",
+  "quality_score_before": 1-10,
+  "quality_score_after": 1-10,
   "has_watermark": true/false,
-  "watermark_location": "description of where watermark is or null",
+  "watermark_description": "location and type or null",
+  "has_screenshot_elements": true/false,
+  "should_improve_background": true/false,
+  "background_change": "subtle description of background improvement or null",
+  "apply_filter": true/false,
+  "filter_description": "slight saturation boost, contrast enhancement etc",
   "has_text_overlay": true/false,
-  "text_overlay_content": "what the text says or null",
-  "background_type": "description of background",
-  "should_change_background": true/false,
-  "background_reason": "why change or keep background",
-  "should_change_font": true/false,
-  "font_suggestion": "font name",
-  "should_change_colors": true/false,
-  "color_suggestion": "color change description or null",
-  "main_subject": "what/who is the main subject",
-  "quality_score": 1-10,
-  "edit_prompt": "A detailed English prompt for gpt-image-1 to edit this image. Be very specific about what to change and what to keep. Always include: enhance to HD quality, keep main subject intact."
+  "text_to_restyle": "what text exists or null",
+  "should_change_clothing_color": true/false,
+  "clothing_color_change": "subtle hue shift description or null",
+  "edit_prompt": "A precise, detailed English prompt for gpt-image-1. Describe every subtle change clearly. Start with: Subtly redesign this image while keeping all people, faces, text content, and main subjects completely intact. Then list each specific change."
 }`;
 
     document.getElementById('ai-pbar').style.width='35%';
@@ -947,19 +971,24 @@ Analyze the image and respond ONLY with a valid JSON object (no markdown, no exp
     document.getElementById('ai-pbar').style.width='55%';
     document.getElementById('ai-status').textContent='Aplicando ediciones con gpt-image-1...';
 
-    // Update overlay with what it found
+    // Update overlay with detected changes
+    const detectedChanges = [
+      analysis.has_watermark ? '🚫 Quitando watermark' : null,
+      analysis.should_improve_background ? '🌅 Mejorando fondo' : null,
+      analysis.apply_filter ? '✨ Aplicando filtro' : null,
+      analysis.has_text_overlay ? '🔤 Mejorando tipografía' : null,
+      analysis.has_screenshot_elements ? '⬜ Redondeando bordes' : null,
+      analysis.should_change_clothing_color ? '👕 Ajustando colores' : null,
+      '📈 Mejorando a HD'
+    ].filter(Boolean);
+
     document.getElementById('ed-after').innerHTML=`
       <div class="processing-wrap">
         <img class="orig-img" src="${state.selectedPost.imageUrl}" onerror="this.style.display='none'"/>
         <div class="processing-content">
           <span class="spin"></span>
-          <p>✏️ Editando imagen...<br>
-          <span style="font-size:10px;opacity:0.7">
-            ${analysis.has_watermark ? '🚫 Quitando watermark · ' : ''}
-            ${analysis.should_change_background ? '🌅 Cambiando fondo · ' : ''}
-            ${analysis.should_change_font ? '🔤 Cambiando fuente · ' : ''}
-            📈 Mejorando HD
-          </span></p>
+          <p style="text-align:center">✏️ Rediseñando imagen...<br>
+          <span style="font-size:10px;opacity:0.7;line-height:1.8">${detectedChanges.join(' · ')}</span></p>
         </div>
       </div>`;
 
