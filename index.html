@@ -227,6 +227,32 @@ select option{background:var(--surface2)}textarea{resize:vertical}
 .opt-item span{font-size:12px;color:var(--text)}
 .title-edit-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
 .title-edit-row textarea{flex:1;height:72px;font-size:13px;margin:0}
+
+/* ---- CALENDAR PICKER ---- */
+.cal-modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;display:none;align-items:center;justify-content:center;padding:16px}
+.cal-modal.open{display:flex}
+.cal-box{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:20px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cal-title{font-size:15px;font-weight:600}
+.cal-nav{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text)}
+.cal-nav:hover{background:var(--surface3)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:16px}
+.cal-day-name{text-align:center;font-size:11px;font-weight:600;color:var(--muted);padding:4px 0}
+.cal-day{text-align:center;padding:8px 4px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.15s}
+.cal-day:hover:not(.cal-day-disabled){background:var(--surface2)}
+.cal-day.selected{background:var(--accent);color:#fff}
+.cal-day.today{border:1px solid var(--accent);color:var(--accent)}
+.cal-day.cal-day-disabled{color:var(--border2);cursor:not-allowed}
+.cal-day.other-month{color:var(--muted);opacity:0.4}
+.cal-time{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.cal-time-block label{font-size:11px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px}
+.cal-time-select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 10px;color:var(--text);font-size:14px;outline:none;margin:0}
+.cal-time-select:focus{border-color:var(--accent)}
+.cal-selected-display{background:var(--surface2);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--text);margin-bottom:16px;text-align:center;font-weight:500}
+.cal-actions{display:flex;gap:8px}
+.cal-trigger{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 14px;cursor:pointer;font-size:13px;color:var(--text);width:100%;margin-bottom:12px;transition:border-color 0.15s}
+.cal-trigger:hover{border-color:var(--accent)}
+.cal-trigger.has-date{border-color:var(--accent);color:var(--accent)}
 .see-more-btn{color:var(--accent);cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap}
 .see-more-btn:hover{text-decoration:underline}
 .title-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
@@ -443,6 +469,11 @@ select option{background:var(--surface2)}textarea{resize:vertical}
     <div id="sec-config" class="section">
       <div class="page-header"><div class="page-title">Configuración</div></div>
       <div class="card">
+        <div class="card-title">🗄️ Base de datos</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Todo se guarda automáticamente en MongoDB. Los posts, configuración y tokens persisten aunque recargues el panel.</p>
+        <button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑️ Borrar todos los posts</button>
+      </div>
+      <div class="card">
         <div class="card-title">🤖 Apify Token</div>
         <input type="password" id="apify-token" value="apify_api_QJTjE3ho2GUcotFiHSHRONfDrtKn7b34KDP3"/>
         <button class="btn btn-ghost btn-sm" onclick="verifyApify()">Verificar</button>
@@ -462,6 +493,38 @@ select option{background:var(--surface2)}textarea{resize:vertical}
     </div>
 
   </main>
+</div>
+
+<!-- CALENDAR MODAL -->
+<div class="cal-modal" id="cal-modal">
+  <div class="cal-box">
+    <div class="cal-header">
+      <button class="cal-nav" onclick="calPrev()">‹</button>
+      <div class="cal-title" id="cal-month-title"></div>
+      <button class="cal-nav" onclick="calNext()">›</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-time">
+      <div class="cal-time-block">
+        <label>Hora</label>
+        <select class="cal-time-select" id="cal-hour"></select>
+      </div>
+      <div class="cal-time-block">
+        <label>Minutos</label>
+        <select class="cal-time-select" id="cal-min">
+          <option value="00">00</option>
+          <option value="15">15</option>
+          <option value="30">30</option>
+          <option value="45">45</option>
+        </select>
+      </div>
+    </div>
+    <div class="cal-selected-display" id="cal-selected-display">Selecciona fecha y hora</div>
+    <div class="cal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeCal()" style="flex:1;justify-content:center">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmCal()" style="flex:1;justify-content:center">✓ Confirmar</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -587,6 +650,7 @@ async function startScraping(){
   addLog('✓ Total: '+state.posts.length,'ok');
   renderScrapedResults(); renderEditorList(); updateCounters();
   updateApifyDot(true);
+  dbSavePosts(); // Guardar en DB
   btn.disabled=false; btn.innerHTML='🔄 Scrapear de nuevo';
 }
 
@@ -916,6 +980,7 @@ function approveEdit(){
   state.selectedPost.status='pending_approval';
   state.pendingApproval.push({...state.selectedPost});
   closeDetail(); renderEditorList(); renderApprovalList(); updateCounters();
+  dbSavePosts(); // Guardar en DB
   toast('Post enviado a aprobación ✓');
 }
 function rejectEdit(){closeDetail();}
@@ -946,10 +1011,13 @@ function renderApprovalList(){
       </div>
       <label>Caption</label>
       <textarea id="cap-${p.id}" style="height:80px;margin-bottom:12px">${(p.titleEdited||p.title).substring(0,120)} 🔥\n\n¡Comparte si te sorprendió!</textarea>
-      <div style="margin-bottom:14px"><label>Programar (opcional)</label><input type="datetime-local" id="sched-${p.id}" style="margin:0"/></div>
+      <div style="margin-bottom:14px">
+        <div id="cal-display-${p.id}" class="cal-trigger" onclick="openCal('${p.id}')">
+          <span>📅</span> <span id="cal-label-${p.id}">Seleccionar fecha y hora para programar</span>
+        </div>
+      </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-danger btn-sm" onclick="rejectPost('${p.id}')">✕ Rechazar</button>
-        <button class="btn btn-ghost btn-sm" onclick="schedulePost('${p.id}')">📅 Programar</button>
         <button class="btn btn-success btn-sm" onclick="publishPost('${p.id}')">🚀 Publicar ahora</button>
       </div>
     </div>`).join('');
@@ -960,38 +1028,39 @@ function rejectPost(id){
   if(p) p.status='rejected';
   renderApprovalList(); updateCounters(); toast('Post rechazado');
 }
-async function schedulePost(id){
+async function schedulePost(id, dateStr){
   const p=state.pendingApproval.find(x=>String(x.id)===String(id));
-  const sched=document.getElementById('sched-'+id)?.value;
+  if(!dateStr){toast('Selecciona fecha y hora en el calendario');return;}
   const token=document.getElementById('fb-token').value;
   const pageId=document.getElementById('fb-page-id').value;
   const caption=document.getElementById('cap-'+id)?.value||p.titleEdited||p.title;
   const imageSrc=p.imageEdited||p.imageUrl||'';
-  if(!sched){toast('Selecciona fecha y hora');return;}
   if(!token||!pageId){toast('Configura el token y page ID en Publicar');return;}
-  const schedDate=new Date(sched);
+  const schedDate=new Date(dateStr);
   if(schedDate<=new Date()){toast('La fecha debe ser en el futuro');return;}
 
-  const btn=document.querySelector(`[onclick="schedulePost('${id}')"]`);
-  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span> Programando...';}
-
+  toast('Programando post...');
   try{
     const res=await fetch('/api/schedule-post',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({postId:id,pageId,token,caption,imageSrc,scheduledAt:sched})
+      body:JSON.stringify({postId:id,pageId,token,caption,imageSrc,scheduledAt:dateStr})
     });
     const data=await res.json();
     if(data.success){
-      if(p){p.status='scheduled';p.scheduledAt=sched;}
+      if(p){p.status='scheduled';p.scheduledAt=dateStr;}
+      // Update calendar label
+      const label=document.getElementById('cal-label-'+id);
+      const trigger=document.getElementById('cal-display-'+id);
+      if(label) label.textContent='✓ '+schedDate.toLocaleString('es-MX');
+      if(trigger) trigger.classList.add('has-date');
       renderApprovalList(); renderPublishList(); updateCounters();
-      toast('📅 Programado para: '+schedDate.toLocaleString('es-MX'));
+      dbSavePosts();
+      toast('📅 Programado: '+schedDate.toLocaleString('es-MX'));
     } else {
       toast('Error: '+(data.error||'No se pudo programar'));
-      if(btn){btn.disabled=false;btn.innerHTML='📅 Programar';}
     }
   }catch(e){
     toast('Error: '+e.message);
-    if(btn){btn.disabled=false;btn.innerHTML='📅 Programar';}
   }
 }
 async function publishPost(id){
@@ -1123,7 +1192,197 @@ function toast(msg){
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3200);
 }
+// ---- CALENDAR ----
+let calState = {
+  currentMonth: new Date(),
+  selectedDate: null,
+  targetPostId: null,
+  onConfirm: null
+};
+
+function openCal(postId) {
+  calState.targetPostId = postId;
+  calState.selectedDate = null;
+  calState.currentMonth = new Date();
+  renderCal();
+  populateHours();
+  document.getElementById('cal-modal').classList.add('open');
+}
+
+function closeCal() {
+  document.getElementById('cal-modal').classList.remove('open');
+}
+
+function populateHours() {
+  const sel = document.getElementById('cal-hour');
+  sel.innerHTML = '';
+  for(let h=0; h<24; h++){
+    const opt = document.createElement('option');
+    opt.value = String(h).padStart(2,'0');
+    opt.textContent = String(h).padStart(2,'0') + ':00';
+    if(h === new Date().getHours()+1) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+function calPrev() {
+  calState.currentMonth = new Date(calState.currentMonth.getFullYear(), calState.currentMonth.getMonth()-1, 1);
+  renderCal();
+}
+
+function calNext() {
+  calState.currentMonth = new Date(calState.currentMonth.getFullYear(), calState.currentMonth.getMonth()+1, 1);
+  renderCal();
+}
+
+function renderCal() {
+  const now = new Date();
+  const year = calState.currentMonth.getFullYear();
+  const month = calState.currentMonth.getMonth();
+  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  document.getElementById('cal-month-title').textContent = months[month] + ' ' + year;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const daysInPrev = new Date(year, month, 0).getDate();
+
+  let html = '';
+  const dayNames = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
+  dayNames.forEach(d => { html += `<div class="cal-day-name">${d}</div>`; });
+
+  // Días del mes anterior
+  for(let i=firstDay-1; i>=0; i--) {
+    html += `<div class="cal-day other-month cal-day-disabled">${daysInPrev-i}</div>`;
+  }
+
+  // Días del mes actual
+  for(let d=1; d<=daysInMonth; d++) {
+    const date = new Date(year, month, d);
+    const isPast = date < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const isToday = date.toDateString() === now.toDateString();
+    const isSelected = calState.selectedDate && date.toDateString() === calState.selectedDate.toDateString();
+    let cls = 'cal-day';
+    if(isPast) cls += ' cal-day-disabled';
+    if(isToday) cls += ' today';
+    if(isSelected) cls += ' selected';
+    const onclick = isPast ? '' : `onclick="selectCalDay(${year},${month},${d})"`;
+    html += `<div class="${cls}" ${onclick}>${d}</div>`;
+  }
+
+  document.getElementById('cal-grid').innerHTML = html;
+  updateCalDisplay();
+}
+
+function selectCalDay(year, month, day) {
+  calState.selectedDate = new Date(year, month, day);
+  renderCal();
+}
+
+function updateCalDisplay() {
+  const display = document.getElementById('cal-selected-display');
+  if(!calState.selectedDate) {
+    display.textContent = 'Selecciona una fecha';
+    display.style.color = 'var(--muted)';
+    return;
+  }
+  const hour = document.getElementById('cal-hour').value;
+  const min = document.getElementById('cal-min').value;
+  const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const d = calState.selectedDate;
+  display.textContent = `📅 ${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} — ${hour}:${min} hrs`;
+  display.style.color = 'var(--accent)';
+}
+
+document.getElementById('cal-hour').addEventListener('change', updateCalDisplay);
+document.getElementById('cal-min').addEventListener('change', updateCalDisplay);
+
+function confirmCal() {
+  if(!calState.selectedDate) { toast('Selecciona una fecha'); return; }
+  const hour = document.getElementById('cal-hour').value;
+  const min = document.getElementById('cal-min').value;
+  const d = calState.selectedDate;
+  // Format: YYYY-MM-DDTHH:MM
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${hour}:${min}`;
+  closeCal();
+  schedulePost(calState.targetPostId, dateStr);
+}
+
+document.getElementById('cal-modal').addEventListener('click', function(e){
+  if(e.target === this) closeCal();
+});
+
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+// ---- BASE DE DATOS - GUARDAR Y CARGAR ----
+async function dbSaveConfig(){
+  try{
+    const cfg={
+      fbToken:document.getElementById('fb-token')?.value||'',
+      fbPageId:document.getElementById('fb-page-id')?.value||'',
+      apifyToken:document.getElementById('apify-token')?.value||'',
+      brandName:document.getElementById('brand-name')?.value||'',
+      brandFont:document.getElementById('brand-font')?.value||'',
+      brandColors:document.getElementById('brand-colors')?.value||'',
+      pages:state.pages
+    };
+    await fetch('/api/config/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
+  }catch(e){console.log('Error guardando config:',e);}
+}
+
+async function dbLoadConfig(){
+  try{
+    const res=await fetch('/api/config/load');
+    const cfg=await res.json();
+    if(cfg.fbToken && document.getElementById('fb-token')) document.getElementById('fb-token').value=cfg.fbToken;
+    if(cfg.fbPageId && document.getElementById('fb-page-id')) document.getElementById('fb-page-id').value=cfg.fbPageId;
+    if(cfg.apifyToken && document.getElementById('apify-token')) document.getElementById('apify-token').value=cfg.apifyToken;
+    if(cfg.brandName && document.getElementById('brand-name')) document.getElementById('brand-name').value=cfg.brandName;
+    if(cfg.brandFont && document.getElementById('brand-font')) document.getElementById('brand-font').value=cfg.brandFont;
+    if(cfg.brandColors && document.getElementById('brand-colors')) document.getElementById('brand-colors').value=cfg.brandColors;
+    if(cfg.pages && cfg.pages.length){ state.pages=cfg.pages; renderChips(); }
+    if(cfg.fbToken && cfg.fbPageId){
+      document.getElementById('fb-status').innerHTML='<span style="color:var(--green)"><span class="dot dot-green"></span>Token cargado ✓</span>';
+    }
+    if(cfg.apifyToken) updateApifyDot(true);
+    console.log('✓ Config cargada desde DB');
+  }catch(e){console.log('Error cargando config:',e);}
+}
+
+async function dbSavePosts(){
+  try{
+    const allPosts=[...state.posts,...state.pendingApproval];
+    if(!allPosts.length) return;
+    await fetch('/api/posts/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({posts:allPosts})});
+  }catch(e){console.log('Error guardando posts:',e);}
+}
+
+async function dbLoadPosts(){
+  try{
+    const res=await fetch('/api/posts/load');
+    const data=await res.json();
+    const posts=data.posts||[];
+    state.posts=posts.filter(p=>p.status==='scraped');
+    state.pendingApproval=posts.filter(p=>['pending_approval','scheduled','published'].includes(p.status));
+    state.published=posts.filter(p=>p.status==='published').length;
+    if(state.posts.length||state.pendingApproval.length){
+      renderScrapedResults();
+      renderEditorList();
+      renderApprovalList();
+      renderPublishList();
+      updateCounters();
+      console.log('✓ Posts cargados desde DB:',posts.length);
+    }
+  }catch(e){console.log('Error cargando posts:',e);}
+}
+
+async function clearAllData(){
+  if(!confirm('¿Borrar todos los posts guardados?')) return;
+  await fetch('/api/posts/clear',{method:'POST'});
+  state.posts=[]; state.pendingApproval=[]; state.published=0;
+  renderScrapedResults(); renderEditorList(); renderApprovalList(); renderPublishList(); updateCounters();
+  toast('Datos borrados ✓');
+}
 
 // ---- GUARDAR Y CARGAR CONFIGURACION ----
 function saveConfig(){
@@ -1137,6 +1396,7 @@ function saveConfig(){
     baseImgPrompt: document.getElementById('base-img-prompt')?.value||''
   };
   localStorage.setItem('viralpanel_config', JSON.stringify(cfg));
+  dbSaveConfig(); // Guardar en DB también
 }
 
 function loadConfig(){
@@ -1159,8 +1419,10 @@ function loadConfig(){
 }
 
 // Auto-guardar cuando cambian los campos
-document.addEventListener('DOMContentLoaded', () => {
-  loadConfig();
+document.addEventListener('DOMContentLoaded', async () => {
+  loadConfig(); // Cargar de localStorage primero (instantáneo)
+  await dbLoadConfig(); // Luego sobreescribir con DB (más reciente)
+  await dbLoadPosts(); // Cargar posts guardados
   ['fb-token','fb-page-id','apify-token','brand-name','brand-font','brand-colors','base-img-prompt'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.addEventListener('change', saveConfig);

@@ -5,12 +5,51 @@ const path = require('path');
 const url = require('url');
 
 const PORT = process.env.PORT || 3000;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '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';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const MONGODB_URI = process.env.MONGODB_URI || '';
+
+// ---- MONGODB ----
+let db = null;
+
+async function connectDB() {
+  if (!MONGODB_URI) { console.log('  ⚠️ Sin MONGODB_URI'); return; }
+  try {
+    const { MongoClient } = require('mongodb');
+    const client = new MongoClient(MONGODB_URI);
+    await client.connect();
+    db = client.db('viralpanel');
+    console.log('  ✅ MongoDB conectado');
+    // Crear índices
+    await db.collection('config').createIndex({ key: 1 }, { unique: true });
+    await db.collection('posts').createIndex({ id: 1 }, { unique: true });
+    await db.collection('scheduled').createIndex({ scheduledAt: 1 });
+  } catch(e) {
+    console.error('  ❌ MongoDB error:', e.message);
+  }
+}
+
+// DB helpers
+async function dbGet(collection, query) {
+  if (!db) return null;
+  return await db.collection(collection).findOne(query);
+}
+async function dbSet(collection, query, data) {
+  if (!db) return;
+  await db.collection(collection).updateOne(query, { $set: data }, { upsert: true });
+}
+async function dbGetAll(collection, query = {}) {
+  if (!db) return [];
+  return await db.collection(collection).find(query).toArray();
+}
+async function dbDelete(collection, query) {
+  if (!db) return;
+  await db.collection(collection).deleteOne(query);
+}
 
 function corsHeaders(extra) {
   return Object.assign({
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
   }, extra || {});
 }
@@ -82,12 +121,12 @@ const scheduledPosts = [];
 
 function addScheduledPost(post) {
   scheduledPosts.push(post);
-  console.log('  📅 Post programado para:', new Date(post.scheduledAt).toLocaleString());
+  if (db) dbSet('scheduled', { postId: post.postId }, post);
+  console.log('  📅 Post programado:', new Date(post.scheduledAt).toLocaleString());
 }
 
 async function publishScheduledPost(post) {
   try {
-    console.log('  🚀 Publicando post programado...');
     const { buffer: imgBuffer, mime: imgMime } = await getImageBuffer(post.imageSrc);
     const boundary = '----FBSched' + Math.random().toString(36).substr(2);
     const formData = buildMultipart(
@@ -102,16 +141,16 @@ async function publishScheduledPost(post) {
     );
     const data = JSON.parse(result.body);
     if (data.id || data.post_id) {
-      console.log('  ✅ Post programado publicado! ID:', data.id || data.post_id);
+      console.log('  ✅ Post programado publicado!');
       post.status = 'published';
       post.publishedAt = new Date().toISOString();
+      if (db) dbSet('scheduled', { postId: post.postId }, post);
     } else {
-      console.error('  ❌ Error:', data.error?.message);
       post.status = 'error';
       post.error = data.error?.message;
+      if (db) dbSet('scheduled', { postId: post.postId }, post);
     }
   } catch (e) {
-    console.error('  ❌ Error scheduler:', e.message);
     post.status = 'error';
     post.error = e.message;
   }
@@ -141,6 +180,77 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       fs.createReadStream(filePath).pipe(res);
     } else { res.writeHead(404); res.end('index.html no encontrado'); }
+    return;
+  }
+
+  // ---- GUARDAR CONFIGURACION ----
+  if (pathname === '/api/config/save') {
+    try {
+      const body = await readBody(req);
+      const payload = JSON.parse(body);
+      await dbSet('config', { key: 'main' }, { key: 'main', ...payload, updatedAt: new Date() });
+      res.writeHead(200, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify({ success: true }));
+    } catch(e) {
+      res.writeHead(500, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // ---- CARGAR CONFIGURACION ----
+  if (pathname === '/api/config/load') {
+    try {
+      const config = await dbGet('config', { key: 'main' });
+      res.writeHead(200, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify(config || {}));
+    } catch(e) {
+      res.writeHead(500, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // ---- GUARDAR POSTS ----
+  if (pathname === '/api/posts/save') {
+    try {
+      const body = await readBody(req);
+      const payload = JSON.parse(body);
+      for (const post of payload.posts || []) {
+        await dbSet('posts', { id: post.id }, { ...post, savedAt: new Date() });
+      }
+      res.writeHead(200, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify({ success: true }));
+    } catch(e) {
+      res.writeHead(500, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // ---- CARGAR POSTS ----
+  if (pathname === '/api/posts/load') {
+    try {
+      const posts = await dbGetAll('posts');
+      res.writeHead(200, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify({ posts }));
+    } catch(e) {
+      res.writeHead(500, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify({ posts: [] }));
+    }
+    return;
+  }
+
+  // ---- BORRAR POSTS ----
+  if (pathname === '/api/posts/clear') {
+    try {
+      if (db) await db.collection('posts').deleteMany({});
+      res.writeHead(200, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify({ success: true }));
+    } catch(e) {
+      res.writeHead(500, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify({ error: e.message }));
+    }
     return;
   }
 
@@ -178,7 +288,6 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(result.status, corsHeaders({ 'Content-Type': 'application/json' }));
       res.end(result.body);
     } catch (e) {
-      console.error('  ❌ Error edit-image:', e.message);
       res.writeHead(500, corsHeaders({ 'Content-Type': 'application/json' }));
       res.end(JSON.stringify({ error: e.message }));
     }
@@ -197,7 +306,6 @@ const server = http.createServer(async (req, res) => {
       }
       let fbResult;
       if (imageSrc) {
-        console.log('  📤 Subiendo imagen a Facebook...');
         const { buffer: imgBuffer, mime: imgMime } = await getImageBuffer(imageSrc);
         const ext = imgMime.includes('png') ? 'png' : 'jpg';
         const boundary = '----FBBoundary' + Math.random().toString(36).substr(2);
@@ -219,11 +327,9 @@ const server = http.createServer(async (req, res) => {
           Buffer.from(textPayload)
         );
       }
-      console.log('  ✅ Facebook respondió:', fbResult.status);
       res.writeHead(fbResult.status, corsHeaders({ 'Content-Type': 'application/json' }));
       res.end(fbResult.body);
     } catch (e) {
-      console.error('  ❌ Error publish:', e.message);
       res.writeHead(500, corsHeaders({ 'Content-Type': 'application/json' }));
       res.end(JSON.stringify({ error: e.message }));
     }
@@ -238,10 +344,9 @@ const server = http.createServer(async (req, res) => {
       const { pageId, token, caption, imageSrc, scheduledAt, postId } = payload;
       if (!pageId || !token || !caption || !scheduledAt) {
         res.writeHead(400, corsHeaders({ 'Content-Type': 'application/json' }));
-        res.end(JSON.stringify({ error: 'Faltan datos requeridos' })); return;
+        res.end(JSON.stringify({ error: 'Faltan datos' })); return;
       }
-      const schedDate = new Date(scheduledAt);
-      if (schedDate <= new Date()) {
+      if (new Date(scheduledAt) <= new Date()) {
         res.writeHead(400, corsHeaders({ 'Content-Type': 'application/json' }));
         res.end(JSON.stringify({ error: 'La fecha debe ser en el futuro' })); return;
       }
@@ -255,7 +360,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ---- ESTADO POSTS PROGRAMADOS ----
+  // ---- ESTADO PROGRAMADOS ----
   if (pathname === '/api/scheduled-status') {
     res.writeHead(200, corsHeaders({ 'Content-Type': 'application/json' }));
     res.end(JSON.stringify({ posts: scheduledPosts }));
@@ -270,7 +375,7 @@ const server = http.createServer(async (req, res) => {
       const openaiPayload = JSON.stringify({
         model: 'gpt-4o',
         messages: [{ role: 'user', content: payload.prompt }],
-        max_tokens: 300
+        max_tokens: 1000
       });
       const result = await httpsPost(
         'api.openai.com', '/v1/chat/completions',
@@ -318,10 +423,13 @@ const server = http.createServer(async (req, res) => {
   res.end(JSON.stringify({ error: 'Not found' }));
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log('');
-  console.log('  🔥 ViralPanel iniciado');
-  console.log('  🌐 Puerto:', PORT);
-  console.log('  ⏰ Scheduler: activo');
-  console.log('');
+// Iniciar servidor y DB
+connectDB().then(() => {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log('');
+    console.log('  🔥 ViralPanel iniciado');
+    console.log('  🌐 Puerto:', PORT);
+    console.log('  ⏰ Scheduler: activo');
+    console.log('');
+  });
 });
