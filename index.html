@@ -478,8 +478,12 @@ select option{background:var(--surface2)}textarea{resize:vertical}
       <div class="page-header"><div class="page-title">Configuración</div></div>
       <div class="card">
         <div class="card-title">🗄️ Base de datos</div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Todo se guarda automáticamente en MongoDB. Los posts, configuración y tokens persisten aunque recargues el panel.</p>
-        <button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑️ Borrar todos los posts</button>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Todo se guarda automáticamente en MongoDB.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="saveAllConfig()">💾 Guardar configuración</button>
+          <button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑️ Borrar todos los posts</button>
+        </div>
+        <div id="config-save-status" style="font-size:12px;margin-top:8px;display:none"></div>
       </div>
       <div class="card">
         <div class="card-title">🤖 Apify Token</div>
@@ -568,9 +572,13 @@ function addPage(){
   if(!v) return;
   if(!v.includes('facebook.com')){toast('Ingresa URL de Facebook válida');return;}
   if(state.pages.includes(v)){toast('Ya está en la lista');return;}
-  state.pages.push(v); document.getElementById('page-input').value=''; renderChips();
+  state.pages.push(v);
+  document.getElementById('page-input').value='';
+  renderChips();
+  dbSaveConfig(); // Guardar inmediatamente en DB
+  toast('Página guardada ✓');
 }
-function removePage(i){state.pages.splice(i,1);renderChips();}
+function removePage(i){state.pages.splice(i,1);renderChips();dbSaveConfig();}
 function renderChips(){
   document.getElementById('pages-chips').innerHTML=state.pages.map((p,i)=>
     `<span class="chip">🔵 ${p.replace('https://www.facebook.com/','fb/')} <span class="chip-x" onclick="removePage(${i})">✕</span></span>`
@@ -1520,6 +1528,7 @@ async function dbSaveConfig(){
       brandName:document.getElementById('brand-name')?.value||'',
       brandFont:document.getElementById('brand-font')?.value||'',
       brandColors:document.getElementById('brand-colors')?.value||'',
+      baseImgPrompt:document.getElementById('base-img-prompt')?.value||'',
       pages:state.pages
     };
     await fetch('/api/config/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
@@ -1530,19 +1539,27 @@ async function dbLoadConfig(){
   try{
     const res=await fetch('/api/config/load');
     const cfg=await res.json();
-    if(cfg.fbToken && document.getElementById('fb-token')) document.getElementById('fb-token').value=cfg.fbToken;
-    if(cfg.fbPageId && document.getElementById('fb-page-id')) document.getElementById('fb-page-id').value=cfg.fbPageId;
-    if(cfg.apifyToken && document.getElementById('apify-token')) document.getElementById('apify-token').value=cfg.apifyToken;
-    if(cfg.brandName && document.getElementById('brand-name')) document.getElementById('brand-name').value=cfg.brandName;
-    if(cfg.brandFont && document.getElementById('brand-font')) document.getElementById('brand-font').value=cfg.brandFont;
-    if(cfg.brandColors && document.getElementById('brand-colors')) document.getElementById('brand-colors').value=cfg.brandColors;
-    if(cfg.pages && cfg.pages.length){ state.pages=cfg.pages; renderChips(); }
+    if(!cfg || Object.keys(cfg).length===0){ console.log('No hay config guardada aún'); return; }
+    if(cfg.fbToken){ const el=document.getElementById('fb-token'); if(el) el.value=cfg.fbToken; }
+    if(cfg.fbPageId){ const el=document.getElementById('fb-page-id'); if(el) el.value=cfg.fbPageId; }
+    if(cfg.apifyToken){ const el=document.getElementById('apify-token'); if(el) el.value=cfg.apifyToken; }
+    if(cfg.brandName){ const el=document.getElementById('brand-name'); if(el) el.value=cfg.brandName; }
+    if(cfg.brandFont){ const el=document.getElementById('brand-font'); if(el) el.value=cfg.brandFont; }
+    if(cfg.brandColors){ const el=document.getElementById('brand-colors'); if(el) el.value=cfg.brandColors; }
+    if(cfg.baseImgPrompt){ const el=document.getElementById('base-img-prompt'); if(el) el.value=cfg.baseImgPrompt; }
+    // Restaurar páginas de Facebook
+    if(cfg.pages && Array.isArray(cfg.pages) && cfg.pages.length>0){
+      state.pages = cfg.pages;
+      renderChips();
+      console.log('✓ Páginas restauradas:', cfg.pages.length);
+    }
     if(cfg.fbToken && cfg.fbPageId){
-      document.getElementById('fb-status').innerHTML='<span style="color:var(--green)"><span class="dot dot-green"></span>Token cargado ✓</span>';
+      const s=document.getElementById('fb-status');
+      if(s) s.innerHTML='<span style="color:var(--green)"><span class="dot dot-green"></span>Token cargado ✓</span>';
     }
     if(cfg.apifyToken) updateApifyDot(true);
     console.log('✓ Config cargada desde DB');
-  }catch(e){console.log('Error cargando config:',e);}
+  }catch(e){ console.log('Error cargando config:',e); }
 }
 
 async function dbSavePosts(){
@@ -1570,6 +1587,24 @@ async function dbLoadPosts(){
       console.log('✓ Posts cargados desde DB:',posts.length);
     }
   }catch(e){console.log('Error cargando posts:',e);}
+}
+
+async function saveAllConfig(){
+  const btn=document.querySelector('[onclick="saveAllConfig()"]');
+  const status=document.getElementById('config-save-status');
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span> Guardando...';}
+  try{
+    await dbSaveConfig();
+    status.style.display='block';
+    status.style.color='var(--green)';
+    status.textContent='✓ Configuración guardada correctamente';
+    setTimeout(()=>status.style.display='none',3000);
+  }catch(e){
+    status.style.display='block';
+    status.style.color='var(--red)';
+    status.textContent='Error: '+e.message;
+  }
+  if(btn){btn.disabled=false;btn.innerHTML='💾 Guardar configuración';}
 }
 
 async function clearAllData(){
@@ -1621,7 +1656,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   await dbLoadPosts(); // Cargar posts guardados
   ['fb-token','fb-page-id','apify-token','brand-name','brand-font','brand-colors','base-img-prompt'].forEach(id => {
     const el = document.getElementById(id);
-    if(el) el.addEventListener('change', saveConfig);
+    if(el) {
+      el.addEventListener('change', saveConfig);
+      el.addEventListener('blur', dbSaveConfig); // Guardar en DB al salir del campo
+    }
   });
 });
 
