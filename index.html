@@ -424,7 +424,15 @@ select option{background:var(--surface2)}textarea{resize:vertical}
             <textarea id="ai-extra" style="height:55px;font-size:12px;margin:0" placeholder="Ej: fuente Helvetica negrita amarilla, fondo más cálido, eliminar marca de agua inferior derecha..."></textarea>
           </div>
 
-          <button class="btn btn-primary btn-full" id="btn-ai" onclick="runAI()" style="font-size:14px;padding:12px">🤖 Editar imagen con gpt-image-1</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0">
+            <button class="btn btn-primary btn-full" id="btn-ai-auto" onclick="runAIAuto()" style="font-size:13px;padding:12px;background:linear-gradient(135deg,#6c63ff,#a78bfa)">
+              🧠 Auto-editar con IA
+            </button>
+            <button class="btn btn-ghost btn-full" id="btn-ai" onclick="runAI()" style="font-size:13px;padding:12px">
+              🎛️ Editar manual
+            </button>
+          </div>
+          <p style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Auto-editar analiza la imagen y decide qué cambiar automáticamente</p>
           <div id="ai-progress" style="display:none;margin-top:12px">
             <div class="progress"><div class="progress-bar" id="ai-pbar" style="width:0%"></div></div>
             <div id="ai-status" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
@@ -859,6 +867,175 @@ function resetTitle(){
   document.getElementById('ed-title-text').value=state.originalTitle;
   state.selectedPost.titleEdited='';
   document.getElementById('title-status').style.display='none';
+}
+
+async function runAIAuto(){
+  if(!state.selectedPost) return;
+  if(!state.selectedPost.imageUrl){toast('Este post no tiene imagen');return;}
+
+  const btnAuto=document.getElementById('btn-ai-auto');
+  const btnManual=document.getElementById('btn-ai');
+  btnAuto.disabled=true; btnManual.disabled=true;
+  btnAuto.innerHTML='<span class="spin"></span> Analizando imagen...';
+  document.getElementById('ai-progress').style.display='block';
+  document.getElementById('ai-result').style.display='none';
+  document.getElementById('ed-actions').style.display='none';
+
+  // Mostrar overlay procesando
+  document.getElementById('ed-after').innerHTML=`
+    <div class="processing-wrap">
+      <img class="orig-img" src="${state.selectedPost.imageUrl}" onerror="this.style.display='none'"/>
+      <div class="processing-content">
+        <span class="spin"></span>
+        <p>🧠 IA analizando imagen...<br><span style="font-size:11px;opacity:0.6">Decidiendo qué editar</span></p>
+      </div>
+    </div>`;
+
+  document.getElementById('ai-pbar').style.width='15%';
+  document.getElementById('ai-status').textContent='GPT-4o analizando la imagen en detalle...';
+
+  const brandFont = document.getElementById('brand-font')?.value || 'Helvetica Neue Bold';
+  const brandColors = document.getElementById('brand-colors')?.value || '';
+  const brandName = document.getElementById('brand-name')?.value || '';
+
+  try {
+    // PASO 1: GPT-4o analiza la imagen y decide qué editar
+    const analysisPrompt = `You are an expert image editor and social media specialist. Analyze this viral Facebook post image carefully and decide what changes would make it more professional, unique, and engaging.
+
+Image URL: ${state.selectedPost.imageUrl}
+Post text: "${state.selectedPost.title.substring(0,200)}"
+${brandName ? 'Brand: '+brandName : ''}
+${brandColors ? 'Brand colors: '+brandColors : ''}
+
+Analyze the image and respond ONLY with a valid JSON object (no markdown, no explanation):
+{
+  "has_watermark": true/false,
+  "watermark_location": "description of where watermark is or null",
+  "has_text_overlay": true/false,
+  "text_overlay_content": "what the text says or null",
+  "background_type": "description of background",
+  "should_change_background": true/false,
+  "background_reason": "why change or keep background",
+  "should_change_font": true/false,
+  "font_suggestion": "font name",
+  "should_change_colors": true/false,
+  "color_suggestion": "color change description or null",
+  "main_subject": "what/who is the main subject",
+  "quality_score": 1-10,
+  "edit_prompt": "A detailed English prompt for gpt-image-1 to edit this image. Be very specific about what to change and what to keep. Always include: enhance to HD quality, keep main subject intact."
+}`;
+
+    document.getElementById('ai-pbar').style.width='35%';
+    document.getElementById('ai-status').textContent='Procesando análisis de IA...';
+
+    const analysisRes = await fetch('/api/openai/rewrite', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ prompt: analysisPrompt })
+    });
+    const analysisData = await analysisRes.json();
+    const rawText = analysisData.choices?.[0]?.message?.content?.trim() || '';
+
+    // Parse JSON from response
+    let analysis = {};
+    try {
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      analysis = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
+    } catch(e) {
+      analysis = { edit_prompt: 'Enhance image quality to HD, remove any watermarks, improve visual appeal for social media, keep main subject intact.' };
+    }
+
+    document.getElementById('ai-pbar').style.width='55%';
+    document.getElementById('ai-status').textContent='Aplicando ediciones con gpt-image-1...';
+
+    // Update overlay with what it found
+    document.getElementById('ed-after').innerHTML=`
+      <div class="processing-wrap">
+        <img class="orig-img" src="${state.selectedPost.imageUrl}" onerror="this.style.display='none'"/>
+        <div class="processing-content">
+          <span class="spin"></span>
+          <p>✏️ Editando imagen...<br>
+          <span style="font-size:10px;opacity:0.7">
+            ${analysis.has_watermark ? '🚫 Quitando watermark · ' : ''}
+            ${analysis.should_change_background ? '🌅 Cambiando fondo · ' : ''}
+            ${analysis.should_change_font ? '🔤 Cambiando fuente · ' : ''}
+            📈 Mejorando HD
+          </span></p>
+        </div>
+      </div>`;
+
+    // PASO 2: Editar imagen con el prompt generado automáticamente
+    const finalPrompt = `${analysis.edit_prompt} ${brandFont && analysis.should_change_font ? 'Use '+brandFont+' font for any text.' : ''} ${brandColors && analysis.should_change_colors ? 'Apply brand colors: '+brandColors+'.' : ''}`;
+
+    const editRes = await fetch('/api/openai/edit-image', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ imageUrl: state.selectedPost.imageUrl, prompt: finalPrompt })
+    });
+
+    document.getElementById('ai-pbar').style.width='90%';
+    document.getElementById('ai-status').textContent='Finalizando imagen editada...';
+
+    const editData = await editRes.json();
+    if(editData.error) throw new Error(editData.error.message || JSON.stringify(editData.error));
+
+    const imgData = editData.data?.[0];
+    let editedImgSrc = '';
+    if(imgData?.b64_json) {
+      editedImgSrc = `data:image/png;base64,${imgData.b64_json}`;
+    } else if(imgData?.url) {
+      editedImgSrc = imgData.url;
+    } else {
+      throw new Error('No se recibió imagen del API');
+    }
+
+    state.selectedPost.imageEdited = editedImgSrc;
+    state.selectedPost.aiImproved = true;
+
+    document.getElementById('ai-pbar').style.width='100%';
+    document.getElementById('ai-status').textContent='¡Imagen editada automáticamente!';
+
+    // Show edited image
+    document.getElementById('ed-after').innerHTML=`
+      <div class="result-img-wrap" onclick="openLB('${esc(editedImgSrc)}','Editado automáticamente con IA')">
+        <img src="${editedImgSrc}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌</div>'"/>
+        <span class="zoom-hint">🔍 Ampliar</span>
+        <span class="img-badge img-badge-green">🧠 Auto-editado</span>
+      </div>`;
+
+    // Build readable summary of changes
+    const changesList = [];
+    if(analysis.has_watermark) changesList.push('🚫 Watermark eliminado');
+    if(analysis.should_change_background) changesList.push('🌅 Fondo mejorado: '+analysis.background_reason);
+    if(analysis.should_change_font) changesList.push('🔤 Fuente cambiada a '+analysis.font_suggestion);
+    if(analysis.should_change_colors) changesList.push('🎨 Colores ajustados');
+    changesList.push('📈 Calidad mejorada a HD');
+
+    const summary = `🧠 ANÁLISIS AUTOMÁTICO DE IA
+
+Sujeto principal: ${analysis.main_subject||'detectado'}
+Calidad original: ${analysis.quality_score||'?'}/10
+
+Cambios aplicados:
+${changesList.map(c=>'• '+c).join('
+')}
+
+Prompt usado:
+${finalPrompt}`;
+
+    state.selectedPost.aiDescription = summary;
+    document.getElementById('ai-result').style.display='block';
+    document.getElementById('ai-result').textContent = summary;
+
+  } catch(e) {
+    state.selectedPost.aiImproved = true;
+    document.getElementById('ed-after').innerHTML=`<div class="compare-placeholder">❌<span style="font-size:11px;padding:0 16px;text-align:center">${e.message}</span></div>`;
+    document.getElementById('ai-result').style.display='block';
+    document.getElementById('ai-result').innerHTML=`<span style="color:var(--red)">❌ Error: ${e.message}</span>`;
+  }
+
+  document.getElementById('ed-actions').style.display='flex';
+  btnAuto.disabled=false; btnManual.disabled=false;
+  btnAuto.innerHTML='🧠 Auto-editar con IA';
+  updateCounters();
 }
 
 async function runAI(){
