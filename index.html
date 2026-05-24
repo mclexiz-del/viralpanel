@@ -1038,17 +1038,7 @@ Respond ONLY with a valid JSON object (no markdown, no code blocks):
     if(analysis.should_change_colors) changesList.push('🎨 Colores ajustados');
     changesList.push('📈 Calidad mejorada a HD');
 
-    const summary = `🧠 ANÁLISIS AUTOMÁTICO DE IA
-
-Sujeto principal: ${analysis.main_subject||'detectado'}
-Calidad original: ${analysis.quality_score||'?'}/10
-
-Cambios aplicados:
-${changesList.map(c=>'• '+c).join('
-')}
-
-Prompt usado:
-${finalPrompt}`;
+    const summary = '🧠 ANÁLISIS AUTOMÁTICO DE IA\n\nSujeto: '+(analysis.main_subject||'detectado')+'\nCalidad: '+(analysis.quality_score||'?')+'/10\n\nCambios aplicados:\n'+changesList.map(c=>'• '+c).join('\n')+'\n\nPrompt:\n'+finalPrompt;
 
     state.selectedPost.aiDescription = summary;
     document.getElementById('ai-result').style.display='block';
