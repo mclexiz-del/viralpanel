@@ -486,39 +486,6 @@ select option{background:var(--surface2)}textarea{resize:vertical}
 
   </main>
 </div>
-
-<!-- CALENDAR MODAL -->
-<div class="cal-modal" id="cal-modal">
-  <div class="cal-box">
-    <div class="cal-header">
-      <button class="cal-nav" onclick="calPrev()">‹</button>
-      <div class="cal-title" id="cal-month-title"></div>
-      <button class="cal-nav" onclick="calNext()">›</button>
-    </div>
-    <div class="cal-grid" id="cal-grid"></div>
-    <div class="cal-time">
-      <div class="cal-time-block">
-        <label>Hora</label>
-        <select class="cal-time-select" id="cal-hour"></select>
-      </div>
-      <div class="cal-time-block">
-        <label>Minutos</label>
-        <select class="cal-time-select" id="cal-min">
-          <option value="00">00</option>
-          <option value="15">15</option>
-          <option value="30">30</option>
-          <option value="45">45</option>
-        </select>
-      </div>
-    </div>
-    <div class="cal-selected-display" id="cal-selected-display">Selecciona fecha y hora</div>
-    <div class="cal-actions">
-      <button class="btn btn-ghost btn-sm" onclick="closeCal()" style="flex:1;justify-content:center">Cancelar</button>
-      <button class="btn btn-primary btn-sm" onclick="confirmCal()" style="flex:1;justify-content:center">✓ Confirmar</button>
-    </div>
-  </div>
-</div>
-
 <script>
 const APIFY_PROXY = '/api/apify';
 const OPENAI_EDIT_IMG = '/api/openai/edit-image';
