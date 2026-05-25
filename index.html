@@ -480,8 +480,7 @@ select option{background:var(--surface2)}textarea{resize:vertical}
         </div>
         <label>Colores de marca</label>
         <input type="text" id="brand-colors" placeholder="#FF5733, #C70039"/>
-        <label style="margin-top:4px">Prompt base para edición de imágenes (manual)</label>
-        <textarea id="base-img-prompt" style="height:90px">Subtly redesign this image while keeping all people, faces, text content, and main subjects completely intact. Apply professional quality improvements: enhance to HD, remove watermarks if present, improve visual appeal for social media. Keep all changes subtle and natural — same image, slightly better version.</textarea>
+
       </div>
     </div>
 
@@ -1414,8 +1413,8 @@ function updateCalDisplay() {
   display.style.color = 'var(--accent)';
 }
 
-document.getElementById('cal-hour').addEventListener('change', updateCalDisplay);
-document.getElementById('cal-min').addEventListener('change', updateCalDisplay);
+const calHourEl = document.getElementById('cal-hour'); if(calHourEl) calHourEl.addEventListener('change', updateCalDisplay);
+const calMinEl = document.getElementById('cal-min'); if(calMinEl) calMinEl.addEventListener('change', updateCalDisplay);
 
 function confirmCal() {
   if(!calState.selectedDate) { toast('Selecciona una fecha'); return; }
@@ -1428,7 +1427,7 @@ function confirmCal() {
   schedulePost(calState.targetPostId, dateStr);
 }
 
-document.getElementById('cal-modal').addEventListener('click', function(e){
+const calModalEl = document.getElementById('cal-modal'); if(calModalEl) calModalEl.addEventListener('click', function(e){
   if(e.target === this) closeCal();
 });
 
