@@ -413,9 +413,8 @@ select option{background:var(--surface2)}textarea{resize:vertical}
           </div>
 
           <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:14px">
-            <div style="font-size:12px;font-weight:600;margin-bottom:8px">✍️ ¿Qué quieres cambiar? Escribe tus instrucciones:</div>
-            <textarea id="ai-extra" style="height:150px;font-size:13px;margin:0;width:100%" placeholder="Ejemplos:&#10;- Quita el logo de la esquina inferior derecha&#10;- Cambia la fuente del texto a Helvetica Bold negrita amarilla&#10;- Mejora la calidad a HD&#10;- Cambia el fondo a gradiente oscuro manteniendo las personas&#10;- Agrega bordes redondeados a las capturas de pantalla"></textarea>
-          </div>
+            <div style="font-size:12px;font-weight:600;margin-bottom:8px">✍️ Escribe tus instrucciones de edición:</div>
+            <textarea id="ai-extra" style="height:150px;font-size:13px;margin:0;width:100%" placeholder="Ejemplos:&#10;- Quita el logo de la esquina inferior derecha&#10;- Cambia la fuente del texto a Helvetica Bold negrita amarilla&#10;- Mejora la calidad a HD&#10;- Cambia el fondo manteniendo las personas&#10;- Agrega bordes redondeados a capturas de pantalla"></textarea>
 
           <button class="btn btn-primary btn-full" id="btn-ai" onclick="runAI()" style="font-size:14px;padding:12px">🤖 Editar imagen con gpt-image-1</button>
           <div id="ai-progress" style="display:none;margin-top:12px">
@@ -1060,44 +1059,39 @@ async function runAI(){
       <img class="orig-img" src="${state.selectedPost.imageUrl}" onerror="this.style.display='none'"/>
       <div class="processing-content">
         <span class="spin"></span>
-        <p>gpt-image-1 editando...<br><span style="font-size:11px;opacity:0.6">Esto tarda ~20-40 segundos</span></p>
+        <p>gpt-image-1 editando...<br><span style="font-size:11px;opacity:0.6">~20-40 segundos</span></p>
       </div>
     </div>`;
 
-  let pct = 10;
-  document.getElementById('ai-pbar').style.width = '10%';
-  document.getElementById('ai-status').textContent = 'Enviando imagen...';
-  const stepInterval = setInterval(()=>{
-    pct = Math.min(pct+8, 88);
-    document.getElementById('ai-pbar').style.width = pct+'%';
-    document.getElementById('ai-status').textContent = pct<40 ? 'Enviando imagen...' : pct<70 ? 'gpt-image-1 procesando...' : 'Aplicando cambios...';
-  }, 4000);
+  let pct=10;
+  document.getElementById('ai-pbar').style.width='10%';
+  document.getElementById('ai-status').textContent='Enviando imagen...';
+  const stepInterval=setInterval(()=>{
+    pct=Math.min(pct+8,88);
+    document.getElementById('ai-pbar').style.width=pct+'%';
+    document.getElementById('ai-status').textContent=pct<40?'Enviando imagen...':pct<70?'gpt-image-1 procesando...':'Aplicando cambios...';
+  },4000);
 
   try{
-    const res = await fetch(OPENAI_EDIT_IMG, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ imageUrl: state.selectedPost.imageUrl, prompt: extra })
+    const res=await fetch(OPENAI_EDIT_IMG,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({imageUrl:state.selectedPost.imageUrl, prompt:extra})
     });
-
     clearInterval(stepInterval);
-    document.getElementById('ai-pbar').style.width = '100%';
-    document.getElementById('ai-status').textContent = '¡Imagen lista!';
+    document.getElementById('ai-pbar').style.width='100%';
+    document.getElementById('ai-status').textContent='¡Imagen lista!';
 
-    const data = await res.json();
-    if(data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    const data=await res.json();
+    if(data.error) throw new Error(data.error.message||JSON.stringify(data.error));
 
-    const imgData = data.data?.[0];
-    let editedImgSrc = '';
-    if(imgData?.b64_json){
-      editedImgSrc = 'data:image/png;base64,' + imgData.b64_json;
-    } else if(imgData?.url){
-      editedImgSrc = imgData.url;
-    } else {
-      throw new Error('No se recibió imagen del API');
-    }
+    const imgData=data.data?.[0];
+    let editedImgSrc='';
+    if(imgData?.b64_json){ editedImgSrc='data:image/png;base64,'+imgData.b64_json; }
+    else if(imgData?.url){ editedImgSrc=imgData.url; }
+    else { throw new Error('No se recibió imagen del API'); }
 
-    state.selectedPost.imageEdited = editedImgSrc;
-    state.selectedPost.aiImproved = true;
+    state.selectedPost.imageEdited=editedImgSrc;
+    state.selectedPost.aiImproved=true;
 
     document.getElementById('ed-after').innerHTML=`
       <div class="result-img-wrap" onclick="openLB('${esc(editedImgSrc)}','Editado con gpt-image-1')">
@@ -1110,7 +1104,7 @@ async function runAI(){
     document.getElementById('ai-result').innerHTML='<span style="color:var(--green);font-weight:600">✓ Imagen editada exitosamente</span>';
     document.getElementById('btn-download-edited').style.display='inline-flex';
 
-  } catch(e){
+  }catch(e){
     clearInterval(stepInterval);
     document.getElementById('ed-after').innerHTML='<div class="compare-placeholder">❌<span style="font-size:11px;padding:0 16px;text-align:center">'+e.message+'</span></div>';
     document.getElementById('ai-result').style.display='block';
@@ -1122,196 +1116,68 @@ async function runAI(){
   updateCounters();
 }
 
-
-async function runAIAuto(){
-  if(!state.selectedPost) return;
-  if(!state.selectedPost.imageUrl){toast('Este post no tiene imagen');return;}
-
-  const btnAuto=document.getElementById('btn-ai-auto');
-  const btnManual=document.getElementById('btn-ai');
-  btnAuto.disabled=true; btnManual.disabled=true;
-  btnAuto.innerHTML='<span class="spin"></span> Analizando imagen...';
-  document.getElementById('ai-progress').style.display='block';
-  document.getElementById('ai-result').style.display='none';
-  document.getElementById('ed-actions').style.display='none';
-
-  // Mostrar overlay procesando
-  document.getElementById('ed-after').innerHTML=`
-    <div class="processing-wrap">
-      <img class="orig-img" src="${state.selectedPost.imageUrl}" onerror="this.style.display='none'"/>
-      <div class="processing-content">
-        <span class="spin"></span>
-        <p>🧠 IA analizando imagen...<br><span style="font-size:11px;opacity:0.6">Decidiendo qué editar</span></p>
-      </div>
-    </div>`;
-
-  document.getElementById('ai-pbar').style.width='15%';
-  document.getElementById('ai-status').textContent='GPT-4o analizando la imagen en detalle...';
-
-  const brandFont = document.getElementById('brand-font')?.value || 'Helvetica Neue Bold';
-  const brandColors = document.getElementById('brand-colors')?.value || '';
-  const brandName = document.getElementById('brand-name')?.value || '';
-
-  try {
-    // PASO 1: GPT-4o analiza la imagen y decide qué editar
-    const analysisPrompt = `You are a PROFESSIONAL IMAGE REDESIGNER specialized in viral Facebook content. Your job is to subtly redesign images to make them look slightly different from the original while keeping the full context, message, and main subjects completely intact.
-
-PHILOSOPHY: Make small but impactful changes. The image should feel refreshed and more professional, not completely different. Think like a designer doing a light rebrand — not a full remake.
-
-Image to analyze:
-- URL: ${state.selectedPost.imageUrl}
-- Post context: "${state.selectedPost.title.substring(0,200)}"
-${brandName ? '- Brand name: '+brandName : ''}
-${brandColors ? '- Brand colors to apply: '+brandColors : ''}
-- Preferred font: ${brandFont}
-
-ANALYZE the image deeply and decide which of these subtle changes apply:
-
-1. WATERMARKS/LOGOS: Are there any visible watermarks, channel logos, or brand marks from other pages? They must be cleanly removed.
-2. IMAGE QUALITY: Always enhance to HD — sharpen details, reduce noise, improve clarity.
-3. SCREENSHOT BORDERS: If the image contains screenshots of posts or messages inside a square/rectangle, add rounded corners (border-radius effect) to those inner elements.
-4. BACKGROUND: Does the background distract from the main subject? Apply a subtle improvement — slightly blur, add gradient, or clean it up. NEVER change it completely if people/subjects are present.
-5. PHOTO FILTER: Apply a subtle professional filter — slightly boost saturation and contrast to make it more vibrant and eye-catching for social media. Keep it natural, not over-processed.
-6. TEXT FONTS: If there are large text overlays (titles, captions on the image), change them to ${brandFont}. Keep the exact same text content, just improve the typography.
-7. CLOTHING COLORS: If there are people and their clothing color is plain/generic, you MAY slightly shift the hue to make it more visually interesting. SUBTLE change only.
-8. COMPOSITION: Minor cropping or framing adjustments if it improves visual balance.
-
-RULES:
-- NEVER change faces, people's features, or identities
-- NEVER alter the meaning or message of the image
-- NEVER add new elements that weren't there
-- NEVER change text content, only typography style
-- Keep ALL changes subtle — 20% different, 80% same
-- The goal is: same image, slightly better version
-
-Respond ONLY with a valid JSON object (no markdown, no code blocks):
-{
-  "main_subject": "detailed description of main subject",
-  "quality_score_before": 1-10,
-  "quality_score_after": 1-10,
-  "has_watermark": true/false,
-  "watermark_description": "location and type or null",
-  "has_screenshot_elements": true/false,
-  "should_improve_background": true/false,
-  "background_change": "subtle description of background improvement or null",
-  "apply_filter": true/false,
-  "filter_description": "slight saturation boost, contrast enhancement etc",
-  "has_text_overlay": true/false,
-  "text_to_restyle": "what text exists or null",
-  "should_change_clothing_color": true/false,
-  "clothing_color_change": "subtle hue shift description or null",
-  "edit_prompt": "A precise, detailed English prompt for gpt-image-1. Describe every subtle change clearly. Start with: Subtly redesign this image while keeping all people, faces, text content, and main subjects completely intact. Then list each specific change."
-}`;
-
-    document.getElementById('ai-pbar').style.width='35%';
-    document.getElementById('ai-status').textContent='Procesando análisis de IA...';
-
-    const analysisRes = await fetch('/api/openai/rewrite', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ prompt: analysisPrompt })
-    });
-    const analysisData = await analysisRes.json();
-    const rawText = analysisData.choices?.[0]?.message?.content?.trim() || '';
-
-    // Parse JSON from response
-    let analysis = {};
-    try {
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      analysis = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
-    } catch(e) {
-      analysis = { edit_prompt: 'Enhance image quality to HD, remove any watermarks, improve visual appeal for social media, keep main subject intact.' };
-    }
-
-    document.getElementById('ai-pbar').style.width='55%';
-    document.getElementById('ai-status').textContent='Aplicando ediciones con gpt-image-1...';
-
-    // Update overlay with detected changes
-    const detectedChanges = [
-      analysis.has_watermark ? '🚫 Quitando watermark' : null,
-      analysis.should_improve_background ? '🌅 Mejorando fondo' : null,
-      analysis.apply_filter ? '✨ Aplicando filtro' : null,
-      analysis.has_text_overlay ? '🔤 Mejorando tipografía' : null,
-      analysis.has_screenshot_elements ? '⬜ Redondeando bordes' : null,
-      analysis.should_change_clothing_color ? '👕 Ajustando colores' : null,
-      '📈 Mejorando a HD'
-    ].filter(Boolean);
-
-    document.getElementById('ed-after').innerHTML=`
-      <div class="processing-wrap">
-        <img class="orig-img" src="${state.selectedPost.imageUrl}" onerror="this.style.display='none'"/>
-        <div class="processing-content">
-          <span class="spin"></span>
-          <p style="text-align:center">✏️ Rediseñando imagen...<br>
-          <span style="font-size:10px;opacity:0.7;line-height:1.8">${detectedChanges.join(' · ')}</span></p>
-        </div>
-      </div>`;
-
-    // PASO 2: Editar imagen con el prompt generado automáticamente
-    const finalPrompt = `${analysis.edit_prompt} ${brandFont && analysis.should_change_font ? 'Use '+brandFont+' font for any text.' : ''} ${brandColors && analysis.should_change_colors ? 'Apply brand colors: '+brandColors+'.' : ''}`;
-
-    const editRes = await fetch('/api/openai/edit-image', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ imageUrl: state.selectedPost.imageUrl, prompt: finalPrompt })
-    });
-
-    document.getElementById('ai-pbar').style.width='90%';
-    document.getElementById('ai-status').textContent='Finalizando imagen editada...';
-
-    const editData = await editRes.json();
-    if(editData.error) throw new Error(editData.error.message || JSON.stringify(editData.error));
-
-    const imgData = editData.data?.[0];
-    let editedImgSrc = '';
-    if(imgData?.b64_json) {
-      editedImgSrc = `data:image/png;base64,${imgData.b64_json}`;
-    } else if(imgData?.url) {
-      editedImgSrc = imgData.url;
-    } else {
-      throw new Error('No se recibió imagen del API');
-    }
-
-    state.selectedPost.imageEdited = editedImgSrc;
-    state.selectedPost.aiImproved = true;
-
-    document.getElementById('ai-pbar').style.width='100%';
-    document.getElementById('ai-status').textContent='¡Imagen editada automáticamente!';
-
-    // Show edited image
-    document.getElementById('ed-after').innerHTML=`
-      <div class="result-img-wrap" onclick="openLB('${esc(editedImgSrc)}','Editado automáticamente con IA')">
-        <img src="${editedImgSrc}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌</div>'"/>
-        <span class="zoom-hint">🔍 Ampliar</span>
-        <span class="img-badge img-badge-green">🧠 Auto-editado</span>
-      </div>`;
-
-    // Build readable summary of changes
-    const changesList = [];
-    if(analysis.has_watermark) changesList.push('🚫 Watermark eliminado');
-    if(analysis.should_change_background) changesList.push('🌅 Fondo mejorado: '+analysis.background_reason);
-    if(analysis.should_change_font) changesList.push('🔤 Fuente cambiada a '+analysis.font_suggestion);
-    if(analysis.should_change_colors) changesList.push('🎨 Colores ajustados');
-    changesList.push('📈 Calidad mejorada a HD');
-
-    const summary = '🧠 ANÁLISIS AUTOMÁTICO DE IA\n\nSujeto: '+(analysis.main_subject||'detectado')+'\nCalidad: '+(analysis.quality_score||'?')+'/10\n\nCambios aplicados:\n'+changesList.map(c=>'• '+c).join('\n')+'\n\nPrompt:\n'+finalPrompt;
-
-    state.selectedPost.aiDescription = summary;
-    document.getElementById('ai-result').style.display='block';
-    document.getElementById('ai-result').textContent = summary;
-
-  } catch(e) {
-    state.selectedPost.aiImproved = true;
-    document.getElementById('ed-after').innerHTML=`<div class="compare-placeholder">❌<span style="font-size:11px;padding:0 16px;text-align:center">${e.message}</span></div>`;
-    document.getElementById('ai-result').style.display='block';
-    document.getElementById('ai-result').innerHTML=`<span style="color:var(--red)">❌ Error: ${e.message}</span>`;
-  }
-
-  document.getElementById('ed-actions').style.display='flex';
-  btnAuto.disabled=false; btnManual.disabled=false;
-  btnAuto.innerHTML='🧠 Auto-editar con IA';
-  updateCounters();
+function downloadEdited(){
+  if(!state.selectedPost?.imageEdited) return;
+  const a=document.createElement('a');
+  a.href=state.selectedPost.imageEdited;
+  a.download=`viral-editada-${Date.now()}.png`;
+  a.click();
 }
 
+function approveEdit(){
+  if(!state.selectedPost) return;
+  state.selectedPost.titleEdited=document.getElementById('ed-title-text').value;
+  state.selectedPost.status='pending_approval';
+  state.pendingApproval.push({...state.selectedPost});
+  closeDetail(); renderEditorList(); renderApprovalList(); updateCounters();
+  dbSavePosts(); // Guardar en DB
+  toast('Post enviado a aprobación ✓');
+}
+function rejectEdit(){closeDetail();}
 
+function renderApprovalList(){
+  const c=document.getElementById('approval-list');
+  const e=document.getElementById('approval-empty');
+  const b=document.getElementById('badge-aprobacion');
+  const pending=state.pendingApproval.filter(p=>p.status==='pending_approval');
+  b.style.display=pending.length?'inline-block':'none'; b.textContent=pending.length;
+  if(!pending.length){e.style.display='block';c.innerHTML='';return;}
+  e.style.display='none';
+  c.innerHTML=pending.map(p=>`
+    <div class="card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:600;flex:1;line-height:1.5">${(p.titleEdited||p.title).substring(0,130)}</div>
+        <span class="tag tag-pending">Pendiente</span>
+      </div>
+      <div class="compare">
+        <div class="compare-box">
+          <div class="compare-label">Original</div>
+          ${p.imageUrl?`<div class="compare-img-wrap" onclick="openLB('${esc(p.imageUrl)}','Original')"><img src="${p.imageUrl}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>📷</div>'"/><span class="zoom-hint">🔍 Ampliar</span></div>`:`<div class="compare-placeholder">📷</div>`}
+        </div>
+        <div class="compare-box">
+          <div class="compare-label">Editado con gpt-image-1</div>
+          ${p.imageEdited?`<div class="compare-img-wrap" onclick="openLB('${esc(p.imageEdited)}','Editado')"><img src="${p.imageEdited}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌</div>'"/><span class="zoom-hint">🔍 Ampliar</span><span class="img-badge img-badge-green">✓ AI</span></div>`:`<div class="compare-placeholder">📷<span>Sin editar</span></div>`}
+        </div>
+      </div>
+      <label>Caption</label>
+      <textarea id="cap-${p.id}" style="height:80px;margin-bottom:12px">${(p.titleEdited||p.title).substring(0,120)} 🔥\n\n¡Comparte si te sorprendió!</textarea>
+      <div style="margin-bottom:14px">
+        <div id="cal-display-${p.id}" class="cal-trigger" onclick="openCal('${p.id}')">
+          <span>📅</span> <span id="cal-label-${p.id}">Seleccionar fecha y hora para programar</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-danger btn-sm" onclick="rejectPost('${p.id}')">✕ Rechazar</button>
+        <button class="btn btn-success btn-sm" onclick="publishPost('${p.id}')">🚀 Publicar ahora</button>
+      </div>
+    </div>`).join('');
+}
+
+function rejectPost(id){
+  const p=state.pendingApproval.find(x=>String(x.id)===String(id));
+  if(p) p.status='rejected';
+  renderApprovalList(); updateCounters(); toast('Post rechazado');
+}
 async function schedulePost(id, dateStr){
   const p=state.pendingApproval.find(x=>String(x.id)===String(id));
   if(!dateStr){toast('Selecciona fecha y hora en el calendario');return;}
