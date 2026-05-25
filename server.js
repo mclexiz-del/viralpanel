@@ -333,7 +333,7 @@ const server = http.createServer(async (req, res) => {
 
       const geminiResult = await httpsPost(
         'generativelanguage.googleapis.com',
-        `/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${GEMINI_API_KEY}`,
+        `/v1beta/models/gemini-2.5-flash-preview-image-generation:generateContent?key=${GEMINI_API_KEY}`,
         {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(geminiPayload)
