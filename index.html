@@ -414,7 +414,8 @@ select option{background:var(--surface2)}textarea{resize:vertical}
 
           <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:14px">
             <div style="font-size:12px;font-weight:600;margin-bottom:8px">✍️ Escribe tus instrucciones de edición:</div>
-            <textarea id="ai-extra" style="height:150px;font-size:13px;margin:0;width:100%" placeholder="Ejemplos:&#10;- Quita el logo de la esquina inferior derecha&#10;- Cambia la fuente del texto a Helvetica Bold negrita amarilla&#10;- Mejora la calidad a HD&#10;- Cambia el fondo manteniendo las personas&#10;- Agrega bordes redondeados a capturas de pantalla"></textarea>
+            <textarea id="ai-extra" style="height:150px;font-size:13px;margin:0;width:100%" placeholder="Ejemplos:&#10;- Quita el logo de la esquina inferior derecha&#10;- Cambia la fuente a Helvetica Bold negrita amarilla&#10;- Mejora la calidad a HD&#10;- Cambia el fondo manteniendo las personas"></textarea>
+          </div>
 
           <button class="btn btn-primary btn-full" id="btn-ai" onclick="runAI()" style="font-size:14px;padding:12px">🤖 Editar imagen con gpt-image-1</button>
           <div id="ai-progress" style="display:none;margin-top:12px">
@@ -486,6 +487,39 @@ select option{background:var(--surface2)}textarea{resize:vertical}
 
   </main>
 </div>
+
+<!-- CALENDAR MODAL -->
+<div class="cal-modal" id="cal-modal">
+  <div class="cal-box">
+    <div class="cal-header">
+      <button class="cal-nav" onclick="calPrev()">‹</button>
+      <div class="cal-title" id="cal-month-title"></div>
+      <button class="cal-nav" onclick="calNext()">›</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-time">
+      <div class="cal-time-block">
+        <label>Hora</label>
+        <select class="cal-time-select" id="cal-hour"></select>
+      </div>
+      <div class="cal-time-block">
+        <label>Minutos</label>
+        <select class="cal-time-select" id="cal-min">
+          <option value="00">00</option>
+          <option value="15">15</option>
+          <option value="30">30</option>
+          <option value="45">45</option>
+        </select>
+      </div>
+    </div>
+    <div class="cal-selected-display" id="cal-selected-display">Selecciona fecha y hora</div>
+    <div class="cal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeCal()" style="flex:1;justify-content:center">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmCal()" style="flex:1;justify-content:center">✓ Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const APIFY_PROXY = '/api/apify';
 const OPENAI_EDIT_IMG = '/api/openai/edit-image';
@@ -1011,75 +1045,44 @@ Respond ONLY with a valid JSON object (no markdown, no code blocks):
 async function runAI(){
   if(!state.selectedPost) return;
   if(!state.selectedPost.imageUrl){toast('Este post no tiene imagen');return;}
-
-  const extra = document.getElementById('ai-extra')?.value?.trim();
-  if(!extra){ toast('Escribe las instrucciones para editar la imagen'); return; }
-
-  const btn = document.getElementById('btn-ai');
-  btn.disabled=true; btn.innerHTML='<span class="spin"></span> gpt-image-1 editando...';
+  const extra=document.getElementById('ai-extra')?.value?.trim();
+  if(!extra){toast('Escribe las instrucciones para editar la imagen');return;}
+  const btn=document.getElementById('btn-ai');
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span> gpt-image-1 editando...';
   document.getElementById('ai-progress').style.display='block';
   document.getElementById('ai-result').style.display='none';
   document.getElementById('ed-actions').style.display='none';
-
-  document.getElementById('ed-after').innerHTML=`
-    <div class="processing-wrap">
-      <img class="orig-img" src="${state.selectedPost.imageUrl}" onerror="this.style.display='none'"/>
-      <div class="processing-content">
-        <span class="spin"></span>
-        <p>gpt-image-1 editando...<br><span style="font-size:11px;opacity:0.6">~20-40 segundos</span></p>
-      </div>
-    </div>`;
-
+  document.getElementById('ed-after').innerHTML=`<div class="processing-wrap"><img class="orig-img" src="${state.selectedPost.imageUrl}" onerror="this.style.display='none'"/><div class="processing-content"><span class="spin"></span><p>gpt-image-1 editando...<br><span style="font-size:11px;opacity:0.6">~20-40 segundos</span></p></div></div>`;
   let pct=10;
   document.getElementById('ai-pbar').style.width='10%';
   document.getElementById('ai-status').textContent='Enviando imagen...';
-  const stepInterval=setInterval(()=>{
-    pct=Math.min(pct+8,88);
-    document.getElementById('ai-pbar').style.width=pct+'%';
-    document.getElementById('ai-status').textContent=pct<40?'Enviando imagen...':pct<70?'gpt-image-1 procesando...':'Aplicando cambios...';
-  },4000);
-
+  const stepInterval=setInterval(()=>{pct=Math.min(pct+8,88);document.getElementById('ai-pbar').style.width=pct+'%';document.getElementById('ai-status').textContent=pct<40?'Enviando imagen...':pct<70?'gpt-image-1 procesando...':'Aplicando cambios...';},4000);
   try{
-    const res=await fetch(OPENAI_EDIT_IMG,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({imageUrl:state.selectedPost.imageUrl, prompt:extra})
-    });
+    const res=await fetch(OPENAI_EDIT_IMG,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageUrl:state.selectedPost.imageUrl,prompt:extra})});
     clearInterval(stepInterval);
     document.getElementById('ai-pbar').style.width='100%';
     document.getElementById('ai-status').textContent='¡Imagen lista!';
-
     const data=await res.json();
-    if(data.error) throw new Error(data.error.message||JSON.stringify(data.error));
-
+    if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
     const imgData=data.data?.[0];
     let editedImgSrc='';
-    if(imgData?.b64_json){ editedImgSrc='data:image/png;base64,'+imgData.b64_json; }
-    else if(imgData?.url){ editedImgSrc=imgData.url; }
-    else { throw new Error('No se recibió imagen del API'); }
-
+    if(imgData?.b64_json){editedImgSrc='data:image/png;base64,'+imgData.b64_json;}
+    else if(imgData?.url){editedImgSrc=imgData.url;}
+    else{throw new Error('No se recibió imagen del API');}
     state.selectedPost.imageEdited=editedImgSrc;
     state.selectedPost.aiImproved=true;
-
-    document.getElementById('ed-after').innerHTML=`
-      <div class="result-img-wrap" onclick="openLB('${esc(editedImgSrc)}','Editado con gpt-image-1')">
-        <img src="${editedImgSrc}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌</div>'"/>
-        <span class="zoom-hint">🔍 Ampliar</span>
-        <span class="img-badge img-badge-green">✓ Editado</span>
-      </div>`;
-
+    document.getElementById('ed-after').innerHTML=`<div class="result-img-wrap" onclick="openLB('${esc(editedImgSrc)}','Editado con gpt-image-1')"><img src="${editedImgSrc}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌</div>'"/><span class="zoom-hint">🔍 Ampliar</span><span class="img-badge img-badge-green">✓ Editado</span></div>`;
     document.getElementById('ai-result').style.display='block';
     document.getElementById('ai-result').innerHTML='<span style="color:var(--green);font-weight:600">✓ Imagen editada exitosamente</span>';
     document.getElementById('btn-download-edited').style.display='inline-flex';
-
   }catch(e){
     clearInterval(stepInterval);
     document.getElementById('ed-after').innerHTML='<div class="compare-placeholder">❌<span style="font-size:11px;padding:0 16px;text-align:center">'+e.message+'</span></div>';
     document.getElementById('ai-result').style.display='block';
     document.getElementById('ai-result').innerHTML='<span style="color:var(--red)">❌ Error: '+e.message+'</span>';
   }
-
   document.getElementById('ed-actions').style.display='flex';
-  btn.disabled=false; btn.innerHTML='🤖 Volver a editar';
+  btn.disabled=false;btn.innerHTML='🤖 Volver a editar';
   updateCounters();
 }
 
