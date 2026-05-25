@@ -467,6 +467,18 @@ select option{background:var(--surface2)}textarea{resize:vertical}
         <button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑️ Borrar todos los posts</button>
       </div>
       <div class="card">
+        <div class="card-title">🔮 Gemini API</div>
+        <label>API Key de Gemini</label>
+        <input type="text" id="gemini-key" placeholder="AIzaSy..." style="font-family:monospace;font-size:12px"/>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <button class="btn btn-primary btn-sm" onclick="saveGeminiKey()">💾 Guardar</button>
+          <button class="btn btn-ghost btn-sm" onclick="testGemini()">🧪 Probar conexión</button>
+          <span id="gemini-status" style="font-size:12px;color:var(--muted)">Sin configurar</span>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px">Obtén tu clave en <a href="https://aistudio.google.com" target="_blank" style="color:var(--accent)">aistudio.google.com</a> → Get API Key</p>
+      </div>
+
+      <div class="card">
         <div class="card-title">🤖 Apify Token</div>
         <input type="password" id="apify-token" value="apify_api_QJTjE3ho2GUcotFiHSHRONfDrtKn7b34KDP3"/>
         <button class="btn btn-ghost btn-sm" onclick="verifyApify()">Verificar</button>
@@ -1511,6 +1523,48 @@ async function clearAllData(){
 }
 
 // ---- GUARDAR Y CARGAR CONFIGURACION ----
+function saveGeminiKey(){
+  const key = document.getElementById('gemini-key').value.trim();
+  if(!key){ toast('Escribe tu API Key de Gemini'); return; }
+  localStorage.setItem('gemini_key', key);
+  fetch('/api/config/save-gemini', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({geminiKey: key})
+  }).then(()=>{
+    document.getElementById('gemini-status').textContent = '✓ Guardada';
+    document.getElementById('gemini-status').style.color = 'var(--green)';
+    toast('Clave Gemini guardada ✓');
+  }).catch(e => toast('Error: '+e.message));
+}
+
+async function testGemini(){
+  const key = document.getElementById('gemini-key').value.trim();
+  if(!key){ toast('Primero escribe tu API Key'); return; }
+  const btn = document.querySelector('[onclick="testGemini()"]');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Probando...';
+  const status = document.getElementById('gemini-status');
+  try{
+    const res = await fetch('/api/gemini/test', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({key})
+    });
+    const data = await res.json();
+    if(data.ok){
+      status.textContent = '✅ Conectado correctamente';
+      status.style.color = 'var(--green)';
+      toast('✅ Gemini funciona correctamente');
+    } else {
+      status.textContent = '❌ ' + (data.error || 'Error de conexión');
+      status.style.color = 'var(--red)';
+      toast('❌ Error: ' + (data.error || 'Verifica tu clave'));
+    }
+  } catch(e){
+    status.textContent = '❌ Error: ' + e.message;
+    status.style.color = 'var(--red)';
+  }
+  btn.disabled=false; btn.innerHTML='🧪 Probar conexión';
+}
+
 function saveConfig(){
   const cfg = {
     fbToken: document.getElementById('fb-token')?.value||'',
@@ -1546,6 +1600,14 @@ function loadConfig(){
 
 // Auto-guardar cuando cambian los campos
 document.addEventListener('DOMContentLoaded', async () => {
+  // Load Gemini key from localStorage
+  const savedGeminiKey = localStorage.getItem('gemini_key');
+  if(savedGeminiKey){
+    const el = document.getElementById('gemini-key');
+    if(el){ el.value = savedGeminiKey; }
+    document.getElementById('gemini-status').textContent = '✓ Clave cargada';
+    document.getElementById('gemini-status').style.color = 'var(--green)';
+  }
   loadConfig(); // Cargar de localStorage primero (instantáneo)
   await dbLoadConfig(); // Luego sobreescribir con DB (más reciente)
   await dbLoadPosts(); // Cargar posts guardados

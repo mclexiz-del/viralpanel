@@ -7,10 +7,21 @@ const url = require('url');
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBHxsMHV_yKXt7A5fr6Th3UPCooU8BtRSU';
+let GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBHxsMHV_yKXt7A5fr6Th3UPCooU8BtRSU';
 
 // ---- MONGODB ----
 let db = null;
+
+async function loadGeminiKey() {
+  if (!db) return;
+  try {
+    const cfg = await db.collection('config').findOne({ key: 'gemini' });
+    if (cfg && cfg.geminiKey) {
+      GEMINI_API_KEY = cfg.geminiKey;
+      console.log('  ✅ Gemini key cargada desde DB');
+    }
+  } catch(e) { console.log('  ⚠️ No se pudo cargar Gemini key:', e.message); }
+}
 
 async function connectDB() {
   if (!MONGODB_URI) { console.log('  ⚠️ Sin MONGODB_URI'); return; }
@@ -302,6 +313,54 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ---- EDITAR IMAGEN CON GEMINI ----
+  // ---- TEST GEMINI KEY ----
+  if (pathname === '/api/gemini/test') {
+    try {
+      const body = await readBody(req);
+      const { key } = JSON.parse(body);
+      if (!key) { res.writeHead(400, corsHeaders({'Content-Type':'application/json'})); res.end(JSON.stringify({error:'Key requerida'})); return; }
+      const testPayload = JSON.stringify({
+        contents: [{ parts: [{ text: 'Say "OK" in one word' }] }]
+      });
+      const testResult = await httpsPost(
+        'generativelanguage.googleapis.com',
+        `/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+        { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(testPayload) },
+        Buffer.from(testPayload)
+      );
+      const testData = JSON.parse(testResult.body);
+      if (testData.candidates) {
+        res.writeHead(200, corsHeaders({'Content-Type':'application/json'}));
+        res.end(JSON.stringify({ ok: true }));
+      } else {
+        res.writeHead(200, corsHeaders({'Content-Type':'application/json'}));
+        res.end(JSON.stringify({ ok: false, error: testData.error?.message || JSON.stringify(testData) }));
+      }
+    } catch(e) {
+      res.writeHead(500, corsHeaders({'Content-Type':'application/json'}));
+      res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+    return;
+  }
+
+  // ---- SAVE GEMINI KEY ----
+  if (pathname === '/api/config/save-gemini') {
+    try {
+      const body = await readBody(req);
+      const { geminiKey } = JSON.parse(body);
+      if (geminiKey) {
+        process.env.GEMINI_API_KEY = geminiKey;
+        if (db) await dbSet('config', { key: 'gemini' }, { key: 'gemini', geminiKey, updatedAt: new Date() });
+      }
+      res.writeHead(200, corsHeaders({'Content-Type':'application/json'}));
+      res.end(JSON.stringify({ success: true }));
+    } catch(e) {
+      res.writeHead(500, corsHeaders({'Content-Type':'application/json'}));
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
   if (pathname === '/api/gemini/edit-image') {
     try {
       const body = await readBody(req);
@@ -508,6 +567,7 @@ const server = http.createServer(async (req, res) => {
 
 // Iniciar servidor y DB
 connectDB().then(() => {
+  await loadGeminiKey();
   server.listen(PORT, '0.0.0.0', () => {
     console.log('');
     console.log('  🔥 ViralPanel iniciado');
