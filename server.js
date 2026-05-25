@@ -7,7 +7,7 @@ const url = require('url');
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const MONGODB_URI = process.env.MONGODB_URI || '';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyDOSe0ujb1BgvDUk-HOm0CiMOxmpfPN0lg';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyCUZyd7mIt_1lin3LqyuP2oAKa9Nlvr37E';
 
 // ---- MONGODB ----
 let db = null;
