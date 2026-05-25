@@ -7,6 +7,7 @@ const url = require('url');
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const MONGODB_URI = process.env.MONGODB_URI || '';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyDOSe0ujb1BgvDUk-HOm0CiMOxmpfPN0lg';
 
 // ---- MONGODB ----
 let db = null;
@@ -264,15 +265,21 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(400, corsHeaders({ 'Content-Type': 'application/json' }));
         res.end(JSON.stringify({ error: 'imageUrl y prompt requeridos' })); return;
       }
+
+      // Enriquecer el prompt automáticamente para mejores resultados
+      const enhancedPrompt = `${prompt}. Important: maintain the original composition, keep all people and faces exactly as they are, preserve the original image dimensions and aspect ratio, output in the highest quality possible.`;
+
       console.log('  📥 Descargando imagen...');
       const { buffer: imgBuffer, mime: imgMime } = await getImageBuffer(imageUrl);
       const ext = imgMime.includes('png') ? 'png' : 'jpeg';
       const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
-      console.log('  🤖 Enviando a gpt-image-1...');
+
+      // Intentar con 1024x1024 primero (máximo soportado para edits)
+      console.log('  🤖 Enviando a gpt-image-1 (quality: high)...');
       const boundary = '----FormBoundary' + Math.random().toString(36).substr(2);
       const formData = buildMultipart(
         boundary,
-        { model: 'gpt-image-1', prompt, size: '1024x1024', quality: 'high' },
+        { model: 'gpt-image-1', prompt: enhancedPrompt, size: '1024x1024', quality: 'high' },
         'image[]', imgBuffer, 'image.' + ext, mimeType
       );
       const result = await httpsPost(
@@ -287,6 +294,82 @@ const server = http.createServer(async (req, res) => {
       console.log('  ✅ OpenAI respondió:', result.status);
       res.writeHead(result.status, corsHeaders({ 'Content-Type': 'application/json' }));
       res.end(result.body);
+    } catch (e) {
+      res.writeHead(500, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // ---- EDITAR IMAGEN CON GEMINI ----
+  if (pathname === '/api/gemini/edit-image') {
+    try {
+      const body = await readBody(req);
+      const payload = JSON.parse(body);
+      const { imageUrl, prompt } = payload;
+      if (!imageUrl || !prompt) {
+        res.writeHead(400, corsHeaders({ 'Content-Type': 'application/json' }));
+        res.end(JSON.stringify({ error: 'imageUrl y prompt requeridos' })); return;
+      }
+
+      console.log('  📥 Descargando imagen para Gemini...');
+      const { buffer: imgBuffer, mime: imgMime } = await getImageBuffer(imageUrl);
+      const base64Image = imgBuffer.toString('base64');
+      const mimeType = imgMime.split(';')[0] || 'image/jpeg';
+
+      console.log('  🔮 Enviando a Gemini imagen-edit...');
+
+      const geminiPayload = JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt + '. Maintain original composition, keep all people and faces exactly as they are, output highest quality.' },
+            { inline_data: { mime_type: mimeType, data: base64Image } }
+          ]
+        }],
+        generationConfig: {
+          response_modalities: ['IMAGE', 'TEXT'],
+          temperature: 1,
+          topP: 0.95,
+          topK: 32,
+          maxOutputTokens: 8192
+        }
+      });
+
+      const geminiResult = await httpsPost(
+        'generativelanguage.googleapis.com',
+        `/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(geminiPayload)
+        },
+        Buffer.from(geminiPayload)
+      );
+
+      console.log('  ✅ Gemini respondió:', geminiResult.status);
+      const geminiData = JSON.parse(geminiResult.body);
+
+      // Extract image from response
+      let imageBase64 = null;
+      if (geminiData.candidates && geminiData.candidates[0]) {
+        const parts = geminiData.candidates[0].content?.parts || [];
+        for (const part of parts) {
+          if (part.inline_data?.mime_type?.startsWith('image/')) {
+            imageBase64 = part.inline_data.data;
+            break;
+          }
+        }
+      }
+
+      if (imageBase64) {
+        res.writeHead(200, corsHeaders({ 'Content-Type': 'application/json' }));
+        res.end(JSON.stringify({
+          data: [{ b64_json: imageBase64 }]
+        }));
+      } else {
+        res.writeHead(500, corsHeaders({ 'Content-Type': 'application/json' }));
+        res.end(JSON.stringify({ error: 'Gemini no devolvió imagen', raw: geminiData }));
+      }
+
     } catch (e) {
       res.writeHead(500, corsHeaders({ 'Content-Type': 'application/json' }));
       res.end(JSON.stringify({ error: e.message }));

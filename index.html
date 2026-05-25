@@ -414,10 +414,17 @@ select option{background:var(--surface2)}textarea{resize:vertical}
 
           <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:14px">
             <div style="font-size:12px;font-weight:600;margin-bottom:8px">✍️ Escribe tus instrucciones de edición:</div>
-            <textarea id="ai-extra" style="height:150px;font-size:13px;margin:0;width:100%" placeholder="Ejemplos:&#10;- Quita el logo de la esquina inferior derecha&#10;- Cambia la fuente a Helvetica Bold negrita amarilla&#10;- Mejora la calidad a HD&#10;- Cambia el fondo manteniendo las personas"></textarea>
+            <textarea id="ai-extra" style="height:150px;font-size:13px;margin:0;width:100%" placeholder="Ejemplos:&#10;- Quita el logo/watermark de la esquina inferior derecha&#10;- Cambia la fuente del texto a Helvetica Bold negrita en color amarillo&#10;- Mejora la nitidez y calidad a HD&#10;- Aplica un filtro cálido/vibrante a la foto&#10;- Cambia el fondo por un degradado oscuro manteniendo a las personas exactamente igual"></textarea>
           </div>
 
-          <button class="btn btn-primary btn-full" id="btn-ai" onclick="runAI()" style="font-size:14px;padding:12px">🤖 Editar imagen con gpt-image-1</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <button class="btn btn-primary btn-full" id="btn-ai" onclick="runAI('openai')" style="font-size:13px;padding:12px">
+              🤖 gpt-image-1
+            </button>
+            <button class="btn btn-full" id="btn-gemini" onclick="runAI('gemini')" style="font-size:13px;padding:12px;background:linear-gradient(135deg,#4285f4,#34a853);color:#fff;border:none;border-radius:var(--radius);cursor:pointer">
+              🔮 Gemini
+            </button>
+          </div>
           <div id="ai-progress" style="display:none;margin-top:12px">
             <div class="progress"><div class="progress-bar" id="ai-pbar" style="width:0%"></div></div>
             <div id="ai-status" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
@@ -522,6 +529,7 @@ select option{background:var(--surface2)}textarea{resize:vertical}
 <script>
 const APIFY_PROXY = '/api/apify';
 const OPENAI_EDIT_IMG = '/api/openai/edit-image';
+const GEMINI_EDIT_IMG = '/api/gemini/edit-image';
 const OPENAI_REWRITE = '/api/openai/rewrite';
 
 let state = {
@@ -1041,13 +1049,18 @@ Respond ONLY with a valid JSON object (no markdown, no code blocks):
   updateCounters();
 }
 
-async function runAI(){
+async function runAI(provider='openai'){
   if(!state.selectedPost) return;
   if(!state.selectedPost.imageUrl){toast('Este post no tiene imagen');return;}
   const extra=document.getElementById('ai-extra')?.value?.trim();
   if(!extra){toast('Escribe las instrucciones para editar la imagen');return;}
-  const btn=document.getElementById('btn-ai');
-  btn.disabled=true;btn.innerHTML='<span class="spin"></span> gpt-image-1 editando...';
+  const isGemini = provider === 'gemini';
+  const endpoint = isGemini ? GEMINI_EDIT_IMG : OPENAI_EDIT_IMG;
+  const btnId = isGemini ? 'btn-gemini' : 'btn-ai';
+  const btn=document.getElementById(btnId);
+  const btnOther=document.getElementById(isGemini ? 'btn-ai' : 'btn-gemini');
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span> '+(isGemini?'Gemini':'gpt-image-1')+' editando...';
+  if(btnOther) btnOther.disabled=true;
   document.getElementById('ai-progress').style.display='block';
   document.getElementById('ai-result').style.display='none';
   document.getElementById('ed-actions').style.display='none';
@@ -1057,7 +1070,7 @@ async function runAI(){
   document.getElementById('ai-status').textContent='Enviando imagen...';
   const stepInterval=setInterval(()=>{pct=Math.min(pct+8,88);document.getElementById('ai-pbar').style.width=pct+'%';document.getElementById('ai-status').textContent=pct<40?'Enviando imagen...':pct<70?'gpt-image-1 procesando...':'Aplicando cambios...';},4000);
   try{
-    const res=await fetch(OPENAI_EDIT_IMG,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageUrl:state.selectedPost.imageUrl,prompt:extra})});
+    const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageUrl:state.selectedPost.imageUrl,prompt:extra})});
     clearInterval(stepInterval);
     document.getElementById('ai-pbar').style.width='100%';
     document.getElementById('ai-status').textContent='¡Imagen lista!';
@@ -1070,7 +1083,7 @@ async function runAI(){
     else{throw new Error('No se recibió imagen del API');}
     state.selectedPost.imageEdited=editedImgSrc;
     state.selectedPost.aiImproved=true;
-    document.getElementById('ed-after').innerHTML=`<div class="result-img-wrap" onclick="openLB('${esc(editedImgSrc)}','Editado con gpt-image-1')"><img src="${editedImgSrc}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌</div>'"/><span class="zoom-hint">🔍 Ampliar</span><span class="img-badge img-badge-green">✓ Editado</span></div>`;
+    document.getElementById('ed-after').innerHTML=`<div class="result-img-wrap" onclick="openLB('${esc(editedImgSrc)}','Editado con gpt-image-1')"><img src="${editedImgSrc}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌</div>'"/><span class="zoom-hint">🔍 Ampliar</span><span class="img-badge img-badge-green">${isGemini?'🔮 Gemini':'✓ gpt-image-1'}</span></div>`;
     document.getElementById('ai-result').style.display='block';
     document.getElementById('ai-result').innerHTML='<span style="color:var(--green);font-weight:600">✓ Imagen editada exitosamente</span>';
     document.getElementById('btn-download-edited').style.display='inline-flex';
@@ -1081,7 +1094,8 @@ async function runAI(){
     document.getElementById('ai-result').innerHTML='<span style="color:var(--red)">❌ Error: '+e.message+'</span>';
   }
   document.getElementById('ed-actions').style.display='flex';
-  btn.disabled=false;btn.innerHTML='🤖 Volver a editar';
+  btn.disabled=false;btn.innerHTML=isGemini?'🔮 Volver a editar':'🤖 Volver a editar';
+  if(btnOther) btnOther.disabled=false;
   updateCounters();
 }
 
