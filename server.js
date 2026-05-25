@@ -327,17 +327,13 @@ const server = http.createServer(async (req, res) => {
           ]
         }],
         generationConfig: {
-          response_modalities: ['IMAGE', 'TEXT'],
-          temperature: 1,
-          topP: 0.95,
-          topK: 32,
-          maxOutputTokens: 8192
+          responseModalities: ['IMAGE', 'TEXT']
         }
       });
 
       const geminiResult = await httpsPost(
         'generativelanguage.googleapis.com',
-        `/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`,
+        `/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${GEMINI_API_KEY}`,
         {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(geminiPayload)
