@@ -1395,7 +1395,8 @@ async function runChatGPT(){
     const data=await res.json();
     if(data.error) throw new Error(data.error.message||JSON.stringify(data.error));
 
-    const imgData=data.data?.[0];
+    // gpt-image-2 returns data array directly
+    const imgData=data.data?.[0] || data[0];
     let src='';
     if(imgData?.b64_json){ src='data:image/png;base64,'+imgData.b64_json; }
     else if(imgData?.url){ src=imgData.url; }
@@ -1472,7 +1473,8 @@ async function runAIWeb(){
     const data=await res.json();
     if(data.error) throw new Error(data.error);
 
-    const imgData=data.data?.[0];
+    // gpt-image-2 returns data array directly
+    const imgData=data.data?.[0] || data[0];
     let src='';
     if(imgData?.b64_json){ src='data:image/png;base64,'+imgData.b64_json; }
     else if(imgData?.url){ src=imgData.url; }
