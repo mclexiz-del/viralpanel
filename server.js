@@ -6,7 +6,7 @@ const url = require('url');
 
 const PORT = process.env.PORT || 3000;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const OPENAI_API_KEY = (process.env.OPENAI_API_KEY || '').trim();
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
 // ---- AUTOPUBLICADOR CONFIG ----
@@ -304,6 +304,7 @@ const server = http.createServer(async (req, res) => {
       // Intentar con 1024x1024 primero (máximo soportado para edits)
       console.log('  🤖 Enviando a gpt-image-1 (quality: high)...');
       console.log('  🤖 Modelo OpenAI: gpt-image-1.5');
+      console.log('  🔑 API Key length:', OPENAI_API_KEY.length, 'starts:', OPENAI_API_KEY.substring(0,10));
       const boundary = '----FormBoundary' + Math.random().toString(36).substr(2);
       const formData = buildMultipart(
         boundary,
@@ -323,6 +324,7 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(result.status, corsHeaders({ 'Content-Type': 'application/json' }));
       res.end(result.body);
     } catch (e) {
+      console.log('  ❌ OpenAI error:', e.message, e.stack?.substring(0, 200));
       res.writeHead(500, corsHeaders({ 'Content-Type': 'application/json' }));
       res.end(JSON.stringify({ error: e.message }));
     }
