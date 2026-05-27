@@ -312,9 +312,20 @@ const server = http.createServer(async (req, res) => {
       (async () => {
         try {
           console.log('  🤖 Iniciando gpt-image-2 en background, job:', jobId);
-          const { buffer: imgBuffer, mime: imgMime } = await getImageBuffer(imageUrl);
-          const ext = imgMime.includes('png') ? 'png' : 'jpeg';
-          const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+          const { buffer: rawBuffer, mime: imgMime } = await getImageBuffer(imageUrl);
+          // gpt-image-2 requires PNG - convert if needed
+          let imgBuffer = rawBuffer;
+          let ext = 'png';
+          let mimeType = 'image/png';
+          try {
+            const sharp = require('sharp');
+            imgBuffer = await sharp(rawBuffer).png().toBuffer();
+            console.log('  ✅ Convertido a PNG:', imgBuffer.length, 'bytes');
+          } catch(e) {
+            imgBuffer = rawBuffer;
+            ext = imgMime.includes('png') ? 'png' : 'jpeg';
+            mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+          }
           
           const boundary = '----FormBoundary' + Math.random().toString(36).substr(2);
           const formData = buildMultipart(
