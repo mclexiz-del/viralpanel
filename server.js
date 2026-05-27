@@ -296,44 +296,74 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ error: 'imageUrl y prompt requeridos' })); return;
       }
 
-      // Enriquecer el prompt automáticamente para mejores resultados
       const enhancedPrompt = `${prompt}. Important: maintain the original composition, keep all people and faces exactly as they are, preserve the original image dimensions and aspect ratio, output in the highest quality possible.`;
+      const jobId = 'job_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+      
+      // Store job status
+      if (!global.aiJobs) global.aiJobs = {};
+      global.aiJobs[jobId] = { status: 'processing', result: null, error: null, createdAt: Date.now() };
 
-      console.log('  📥 Descargando imagen...');
-      const { buffer: imgBuffer, mime: imgMime } = await getImageBuffer(imageUrl);
-      const ext = imgMime.includes('png') ? 'png' : 'jpeg';
-      const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+      // Respond immediately with job ID
+      res.writeHead(202, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify({ jobId, status: 'processing' }));
 
-      // Intentar con 1024x1024 primero (máximo soportado para edits)
-      console.log('  🤖 Enviando a gpt-image-2 (quality: high)...');
-      console.log('  🤖 Modelo OpenAI: gpt-image-2 (edición real via /v1/images/edits)');
-      console.log('  🔑 API Key length:', OPENAI_API_KEY.length, 'starts:', OPENAI_API_KEY.substring(0,10));
-      const boundary = '----FormBoundary' + Math.random().toString(36).substr(2);
-      const formData = buildMultipart(
-        boundary,
-        { model: 'gpt-image-2', prompt: enhancedPrompt, size: '1024x1024', quality: 'high' },
-        'image[]', imgBuffer, 'image.' + ext, mimeType
-      );
-      const result = await httpsPost(
-        'api.openai.com', '/v1/images/edits',
-        {
-          'Authorization': 'Bearer ' + OPENAI_API_KEY,
-          'Content-Type': `multipart/form-data; boundary=${boundary}`,
-          'Content-Length': formData.length
-        },
-        formData
-      );
-      console.log('  ✅ OpenAI respondió:', result.status);
-      console.log('  📦 OpenAI respuesta (primeros 500 chars):', result.body.substring(0, 500));
-      res.writeHead(result.status, corsHeaders({ 'Content-Type': 'application/json' }));
-      res.end(result.body);
+      // Process in background
+      (async () => {
+        try {
+          console.log('  🤖 Iniciando gpt-image-2 en background, job:', jobId);
+          const { buffer: imgBuffer, mime: imgMime } = await getImageBuffer(imageUrl);
+          const ext = imgMime.includes('png') ? 'png' : 'jpeg';
+          const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+          
+          const boundary = '----FormBoundary' + Math.random().toString(36).substr(2);
+          const formData = buildMultipart(
+            boundary,
+            { model: 'gpt-image-2', prompt: enhancedPrompt, size: '1024x1024', quality: 'high' },
+            'image[]', imgBuffer, 'image.' + ext, mimeType
+          );
+          const result = await httpsPost(
+            'api.openai.com', '/v1/images/edits',
+            {
+              'Authorization': 'Bearer ' + OPENAI_API_KEY,
+              'Content-Type': `multipart/form-data; boundary=${boundary}`,
+              'Content-Length': formData.length
+            },
+            formData,
+            180000
+          );
+          console.log('  ✅ gpt-image-2 completó job:', jobId, 'status:', result.status);
+          const data = JSON.parse(result.body);
+          global.aiJobs[jobId] = { status: 'done', result: data, error: null };
+          // Cleanup after 10 minutes
+          setTimeout(() => { delete global.aiJobs[jobId]; }, 600000);
+        } catch(e) {
+          console.log('  ❌ gpt-image-2 error job:', jobId, e.message);
+          global.aiJobs[jobId] = { status: 'error', result: null, error: e.message };
+        }
+      })();
+
     } catch (e) {
-      console.log('  ❌ OpenAI error:', e.message, e.stack?.substring(0, 200));
+      console.log('  ❌ OpenAI error:', e.message);
       res.writeHead(500, corsHeaders({ 'Content-Type': 'application/json' }));
       res.end(JSON.stringify({ error: e.message }));
     }
     return;
   }
+
+  // ---- POLL JOB STATUS ----
+  if (pathname.startsWith('/api/job/')) {
+    const jobId = pathname.replace('/api/job/', '');
+    const job = global.aiJobs?.[jobId];
+    if (!job) {
+      res.writeHead(404, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify({ error: 'Job no encontrado' }));
+    } else {
+      res.writeHead(200, corsHeaders({ 'Content-Type': 'application/json' }));
+      res.end(JSON.stringify(job));
+    }
+    return;
+  }
+
 
   // ---- EDITAR IMAGEN CON GEMINI ----
   // ---- TEST GEMINI KEY ----

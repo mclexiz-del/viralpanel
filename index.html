@@ -1384,20 +1384,45 @@ async function runChatGPT(){
   },4000);
 
   try{
-    const res=await fetch(OPENAI_EDIT_IMG,{
+    const submitRes=await fetch(OPENAI_EDIT_IMG,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({imageUrl:state.selectedPost.imageUrl, prompt:extra})
     });
-    clearInterval(stepInterval);
-    document.getElementById('ai-pbar').style.width='100%';
-    document.getElementById('ai-status').textContent='¡Imagen lista!';
-
-    const data=await res.json();
-    if(data.error) throw new Error(data.error.message||JSON.stringify(data.error));
-
-    // gpt-image-2 returns data array directly
-    const imgData=data.data?.[0] || data[0];
+    const submitData=await submitRes.json();
+    if(submitData.error) throw new Error(submitData.error.message||JSON.stringify(submitData.error));
     let src='';
+    if(submitData.data){
+      // Sync response
+      clearInterval(stepInterval);
+      document.getElementById('ai-pbar').style.width='100%';
+      document.getElementById('ai-status').textContent='¡Imagen lista!';
+      const imgData=submitData.data[0]||submitData[0];
+      if(imgData?.b64_json){ src='data:image/png;base64,'+imgData.b64_json; }
+      else if(imgData?.url){ src=imgData.url; }
+      else throw new Error('Sin imagen');
+    } else if(submitData.jobId){
+      document.getElementById('ai-status').textContent='gpt-image-2 procesando... ~1-2 min';
+      for(let i=0;i<30;i++){
+        await new Promise(r=>setTimeout(r,5000));
+        pct=Math.min(pct+3,92);
+        document.getElementById('ai-pbar').style.width=pct+'%';
+        document.getElementById('ai-status').textContent='Procesando... '+((i+1)*5)+'s';
+        const poll=await fetch('/api/job/'+submitData.jobId);
+        const pollData=await poll.json();
+        if(pollData.status==='done'){
+          clearInterval(stepInterval);
+          document.getElementById('ai-pbar').style.width='100%';
+          document.getElementById('ai-status').textContent='¡Imagen lista!';
+          const imgData=pollData.result?.data?.[0];
+          if(imgData?.b64_json){ src='data:image/png;base64,'+imgData.b64_json; break; }
+          else if(imgData?.url){ src=imgData.url; break; }
+          else throw new Error('Sin imagen en resultado');
+        } else if(pollData.status==='error') throw new Error(pollData.error||'Error gpt-image-2');
+      }
+      if(!src) throw new Error('Timeout — demasiado tiempo');
+    } else throw new Error('Respuesta inesperada');
+    // dummy to fix scope
+    const _unused = '';
     if(imgData?.b64_json){ src='data:image/png;base64,'+imgData.b64_json; }
     else if(imgData?.url){ src=imgData.url; }
     else { throw new Error('No se recibió imagen'); }
