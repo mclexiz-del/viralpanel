@@ -252,6 +252,27 @@ select option{background:var(--surface2)}textarea{resize:vertical}
 .cal-actions{display:flex;gap:8px}
 .cal-trigger{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 14px;cursor:pointer;font-size:13px;color:var(--text);width:100%;margin-bottom:12px;transition:border-color 0.15s}
 .cal-trigger:hover{border-color:var(--accent)}
+
+/* ---- AUTO MODE ---- */
+.auto-toggle{display:flex;align-items:center;gap:12px;background:var(--surface2);border:2px solid var(--border2);border-radius:var(--radius-lg);padding:12px 16px;cursor:pointer;transition:all 0.2s;margin-bottom:16px}
+.auto-toggle.on{border-color:#22c55e;background:rgba(34,197,94,0.1)}
+.auto-toggle-dot{width:44px;height:24px;background:var(--border2);border-radius:12px;position:relative;transition:all 0.2s;flex-shrink:0}
+.auto-toggle-dot::after{content:'';position:absolute;width:20px;height:20px;background:#fff;border-radius:50%;top:2px;left:2px;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3)}
+.auto-toggle.on .auto-toggle-dot{background:#22c55e}
+.auto-toggle.on .auto-toggle-dot::after{left:22px}
+.auto-status{font-size:13px;font-weight:600}
+.auto-toggle.on .auto-status{color:#22c55e}
+.auto-config{background:var(--surface2);border-radius:var(--radius);padding:16px;margin-bottom:16px;display:none}
+.auto-config.visible{display:block}
+.auto-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.auto-field label{font-size:11px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px}
+.auto-field input,.auto-field textarea,.auto-field select{margin:0;font-size:13px}
+.auto-field textarea{height:80px}
+.queue-item{background:var(--surface2);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;border:1px solid var(--border2)}
+.queue-item.priority{border-color:var(--amber);background:rgba(245,158,11,0.08)}
+.queue-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--surface3);color:var(--muted)}
+.queue-badge.waiting{background:rgba(108,99,255,0.15);color:var(--accent)}
+.queue-badge.priority{background:rgba(245,158,11,0.15);color:var(--amber)}
 .cal-trigger.has-date{border-color:var(--accent);color:var(--accent)}
 .see-more-btn{color:var(--accent);cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap}
 .see-more-btn:hover{text-decoration:underline}
@@ -267,7 +288,7 @@ select option{background:var(--surface2)}textarea{resize:vertical}
     <div class="mobile-header-title">🔥 ViralPanel</div>
     <div class="mobile-header-sub" id="mobile-section-name">Scraper</div>
   </div>
-  <div style="display:flex;gap:8px;align-items:center">
+  <div style="display:flex;align-items:center;gap:8px">
     <div style="font-size:11px" id="mobile-status-dot"><span class="dot dot-amber"></span></div>
   </div>
 </div>
@@ -308,8 +329,9 @@ select option{background:var(--surface2)}textarea{resize:vertical}
   <aside class="sidebar">
     <div class="logo">
       <div class="logo-icon">🔥</div>
-      <div><div class="logo-text">ViralPanel</div><div class="logo-sub">gpt-image-1 + Facebook</div></div>
+      <div><div class="logo-text">ViralPanel</div><div class="logo-sub">Gemini + Facebook</div></div>
     </div>
+
     <nav>
       <div class="nav-item active" onclick="if(typeof nav==='function')nav('scraper',this)"><span>🌐</span> Scraper</div>
       <div class="nav-item" onclick="if(typeof nav==='function')nav('editor',this)"><span>✨</span> Editor IA <span class="badge" id="badge-editor" style="display:none">0</span></div>
@@ -320,7 +342,7 @@ select option{background:var(--surface2)}textarea{resize:vertical}
     <div style="margin-top:auto;padding:16px 20px;border-top:1px solid var(--border)">
       <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Apify</div>
       <div style="font-size:12px;font-weight:500;margin-bottom:8px" id="apify-dot"><span class="dot dot-amber"></span>Sin verificar</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:3px">gpt-image-1</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Gemini</div>
       <div style="font-size:12px;font-weight:500" id="gpt-dot"><span class="dot dot-green"></span>Activo</div>
     </div>
   </aside>
@@ -332,6 +354,39 @@ select option{background:var(--surface2)}textarea{resize:vertical}
       <div class="page-header">
         <div class="page-title">Scraper de contenido viral</div>
         <div class="page-sub">Extrae posts virales de páginas públicas de Facebook</div>
+      </div>
+
+      <!-- AUTO SCRAPER -->
+      <div class="card" style="border:1.5px solid var(--border2);padding:0;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px">
+          <div style="font-weight:600;font-size:13px">🔍 Auto Scraper</div>
+          <div id="auto-scraper-toggle" onclick="toggleSection('scraper')" style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--surface3);border:1.5px solid var(--border2);border-radius:20px;padding:6px 14px;transition:all 0.2s;font-size:12px;font-weight:700;color:var(--muted)">
+            ⚡ AUTOMÁTICO
+          </div>
+        </div>
+        <div id="auto-scraper-config" style="display:none;border-top:1px solid var(--border);padding:14px">
+          <div style="margin-bottom:12px">
+            <label style="font-size:11px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">⏱ Intervalo entre scraping</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="number" id="auto-scrape-min" value="5" min="1" style="flex:1;margin:0" placeholder="Min"/>
+              <span style="color:var(--muted);font-size:12px">a</span>
+              <input type="number" id="auto-scrape-max" value="15" min="1" style="flex:1;margin:0" placeholder="Max"/>
+              <span style="color:var(--muted);font-size:11px">min aleatorio</span>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">Ej: entre 5 y 10 minutos, elige aleatorio</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button class="btn btn-primary btn-sm" onclick="saveAutoConfig()" style="flex:1;font-size:11px">💾 Guardar</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearLog('auto-scraper-log')" style="font-size:11px">🗑</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button id="btn-start-scraper" onclick="startSection('scraper')" style="flex:1;background:#22c55e;color:#fff;border:none;border-radius:var(--radius);padding:10px;cursor:pointer;font-size:13px;font-weight:700">▶ Iniciar</button>
+            <button id="btn-stop-scraper" onclick="stopSection('scraper')" style="flex:1;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:10px;cursor:pointer;font-size:13px;font-weight:700;display:none">⏹ Detener</button>
+          </div>
+          <div id="auto-scraper-log" style="background:var(--surface3);border-radius:var(--radius);padding:8px;font-size:10px;font-family:monospace;max-height:80px;overflow-y:auto;color:var(--muted)">
+            <div>Esperando...</div>
+          </div>
+        </div>
       </div>
       <div class="metrics">
         <div class="metric"><div class="metric-val blue" id="cnt-scraped">0</div><div class="metric-label">Scrapeados</div></div>
@@ -375,16 +430,68 @@ select option{background:var(--surface2)}textarea{resize:vertical}
         <div class="card-title">📋 Registro</div>
         <div class="log-wrap" id="scrape-log"></div>
       </div>
+      <div id="scraped-toolbar" style="display:none;background:var(--surface2);border-radius:var(--radius);padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;margin:0">
+          <input type="checkbox" id="select-all-scraped" onchange="selectAllPosts('scraped', this.checked)"/> Seleccionar todos
+        </label>
+        <span id="scraped-selected-count" style="font-size:11px;color:var(--muted)"></span>
+        <button class="btn btn-danger btn-sm" onclick="deleteSelected('scraped')" style="margin-left:auto">🗑 Borrar seleccionados</button>
+      </div>
       <div id="scraped-results"></div>
     </div>
 
     <!-- EDITOR -->
     <div id="sec-editor" class="section">
       <div class="page-header">
-        <div class="page-title">Editor con gpt-image-1</div>
-        <div class="page-sub">Edición real de imagen + reescritura viral de título</div>
+        <div class="page-title">Editor con Gemini</div>
+        <div class="page-sub">Edición de imagen con IA • reescritura viral de título</div>
       </div>
+
+      <!-- AUTO EDITOR -->
+      <div class="card" style="border:1.5px solid var(--border2);padding:0;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px">
+          <div style="font-weight:600;font-size:13px">✏️ Auto Editor IA</div>
+          <div id="auto-editor-toggle" onclick="toggleSection('editor')" style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--surface3);border:1.5px solid var(--border2);border-radius:20px;padding:6px 14px;transition:all 0.2s;font-size:12px;font-weight:700;color:var(--muted)">
+            ⚡ AUTOMÁTICO
+          </div>
+        </div>
+        <div id="auto-editor-config" style="display:none;border-top:1px solid var(--border);padding:14px">
+          <div style="margin-bottom:12px">
+            <label style="font-size:11px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">⏱ Intervalo entre ediciones</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="number" id="auto-edit-min" value="1" min="1" style="flex:1;margin:0" placeholder="Min"/>
+              <span style="color:var(--muted);font-size:12px">a</span>
+              <input type="number" id="auto-edit-max" value="3" min="1" style="flex:1;margin:0" placeholder="Max"/>
+              <span style="color:var(--muted);font-size:11px">min entre ediciones</span>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">Pausa aleatoria entre cada imagen editada</div>
+          </div>
+          <div style="margin-bottom:12px">
+            <label style="font-size:11px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">🤖 Prompt automático para Gemini</label>
+            <textarea id="auto-img-prompt" style="height:80px;margin:0;font-size:12px" placeholder="Ej: mejora calidad a HD, quita marcas de agua, aplica filtro profesional">Mejora la calidad a HD, elimina marcas de agua o logos si los hay, cambia la fuente del texto a Helvetica Bold, aplica un filtro profesional para redes sociales, mantén a las personas y el contenido principal intacto.</textarea>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button class="btn btn-primary btn-sm" onclick="saveAutoConfig()" style="flex:1;font-size:11px">💾 Guardar</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearLog('auto-editor-log')" style="font-size:11px">🗑</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button id="btn-start-editor" onclick="startSection('editor')" style="flex:1;background:#f59e0b;color:#000;border:none;border-radius:var(--radius);padding:10px;cursor:pointer;font-size:13px;font-weight:700">▶ Iniciar</button>
+            <button id="btn-stop-editor" onclick="stopSection('editor')" style="flex:1;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:10px;cursor:pointer;font-size:13px;font-weight:700;display:none">⏹ Detener</button>
+          </div>
+          <div id="auto-editor-log" style="background:var(--surface3);border-radius:var(--radius);padding:8px;font-size:10px;font-family:monospace;max-height:80px;overflow-y:auto;color:var(--muted)">
+            <div>Esperando posts...</div>
+          </div>
+        </div>
+      </div>
+
       <div id="editor-empty" class="empty"><span class="empty-icon">✨</span>Scrapeá posts primero para editarlos aquí</div>
+      <div id="editor-toolbar" style="display:none;background:var(--surface2);border-radius:var(--radius);padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;margin:0">
+          <input type="checkbox" id="select-all-editor" onchange="selectAllPosts('editor', this.checked)"/> Seleccionar todos
+        </label>
+        <span id="editor-selected-count" style="font-size:11px;color:var(--muted)"></span>
+        <button class="btn btn-danger btn-sm" onclick="deleteSelected('editor')" style="margin-left:auto">🗑 Borrar seleccionados</button>
+      </div>
       <div id="editor-list"></div>
       <div id="editor-detail" style="display:none">
         <button class="btn btn-ghost btn-sm" onclick="closeDetail()" style="margin-bottom:16px">← Volver a la lista</button>
@@ -400,7 +507,7 @@ select option{background:var(--surface2)}textarea{resize:vertical}
           <div id="title-status" style="font-size:12px;margin-bottom:10px;display:none"></div>
           <div class="divider"></div>
 
-          <div class="sec-label" style="margin-top:14px">🖼️ Edición real de imagen con gpt-image-1</div>
+          <div class="sec-label" style="margin-top:14px">🖼️ Edición real de imagen con Gemini</div>
           <div class="compare">
             <div class="compare-box">
               <div class="compare-label">Original — clic para ampliar</div>
@@ -417,7 +524,10 @@ select option{background:var(--surface2)}textarea{resize:vertical}
             <textarea id="ai-extra" style="height:150px;font-size:13px;margin:0;width:100%" placeholder="Ejemplos:&#10;- Quita el logo/watermark de la esquina inferior derecha&#10;- Cambia la fuente del texto a Helvetica Bold negrita en color amarillo&#10;- Mejora la nitidez y calidad a HD&#10;- Aplica un filtro cálido/vibrante a la foto&#10;- Cambia el fondo por un degradado oscuro manteniendo a las personas exactamente igual"></textarea>
           </div>
 
-          <button class="btn btn-primary btn-full" id="btn-ai" onclick="runAI('gemini')" style="font-size:14px;padding:12px;background:linear-gradient(135deg,#4285f4,#34a853)">🔮 Editar imagen con Gemini</button>
+          <button class="btn btn-primary btn-full" id="btn-ai" onclick="runAI('gemini')" style="font-size:13px;padding:12px;background:linear-gradient(135deg,#4285f4,#34a853)">🔮 Gemini API</button>
+          </div>
+        <button class="btn btn-full" id="btn-chatgpt" onclick="runChatGPT()" style="font-size:13px;padding:12px;background:linear-gradient(135deg,#10a37f,#1a7f64);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;margin-top:8px;width:100%">🤖 Editar con ChatGPT (gpt-image-1)</button>
+        <div style="display:none">
           <div id="ai-progress" style="display:none;margin-top:12px">
             <div class="progress"><div class="progress-bar" id="ai-pbar" style="width:0%"></div></div>
             <div id="ai-status" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
@@ -438,7 +548,59 @@ select option{background:var(--surface2)}textarea{resize:vertical}
         <div class="page-title">Aprobación de contenido</div>
         <div class="page-sub">Revisa antes/después y aprueba para publicar</div>
       </div>
+
+      <!-- AUTO PUBLICADOR -->
+      <div class="card" style="border:1.5px solid var(--border2);padding:0;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px">
+          <div style="font-weight:600;font-size:13px">📤 Auto Publicador</div>
+          <div id="auto-approval-toggle" onclick="toggleSection('approval')" style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--surface3);border:1.5px solid var(--border2);border-radius:20px;padding:6px 14px;transition:all 0.2s;font-size:12px;font-weight:700;color:var(--muted)">
+            ⚡ AUTOMÁTICO
+          </div>
+        </div>
+        <div id="auto-approval-config" style="display:none;border-top:1px solid var(--border);padding:14px">
+          <div style="margin-bottom:12px">
+            <label style="font-size:11px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">⏱ Intervalo entre publicaciones</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="number" id="auto-pub-min" value="10" min="1" style="flex:1;margin:0" placeholder="Min"/>
+              <span style="color:var(--muted);font-size:12px">a</span>
+              <input type="number" id="auto-pub-max" value="30" min="1" style="flex:1;margin:0" placeholder="Max"/>
+              <span style="color:var(--muted);font-size:11px">min aleatorio</span>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">Ej: publica cada 10-30 min aleatoriamente</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <div style="flex:1;text-align:center;background:var(--surface3);border-radius:var(--radius);padding:6px">
+              <div style="font-size:16px;font-weight:700;color:var(--accent)" id="auto-queue-count">0</div>
+              <div style="font-size:9px;color:var(--muted)">En cola</div>
+            </div>
+            <div style="flex:1;text-align:center;background:var(--surface3);border-radius:var(--radius);padding:6px">
+              <div style="font-size:16px;font-weight:700;color:var(--green)" id="auto-stat-published">0</div>
+              <div style="font-size:9px;color:var(--muted)">Publicados</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button class="btn btn-primary btn-sm" onclick="saveAutoConfig()" style="flex:1;font-size:11px">💾 Guardar</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearLog('auto-approval-log')" style="font-size:11px">🗑</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button id="btn-start-approval" onclick="startSection('approval')" style="flex:1;background:#22c55e;color:#fff;border:none;border-radius:var(--radius);padding:10px;cursor:pointer;font-size:13px;font-weight:700">▶ Iniciar</button>
+            <button id="btn-stop-approval" onclick="stopSection('approval')" style="flex:1;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:10px;cursor:pointer;font-size:13px;font-weight:700;display:none">⏹ Detener</button>
+          </div>
+          <div id="auto-approval-log" style="background:var(--surface3);border-radius:var(--radius);padding:8px;font-size:10px;font-family:monospace;max-height:80px;overflow-y:auto;color:var(--muted)">
+            <div>Cola vacía...</div>
+          </div>
+        </div>
+      </div>
+
       <div id="approval-empty" class="empty"><span class="empty-icon">✅</span>No hay posts pendientes</div>
+      <div id="approval-toolbar" style="display:none;background:var(--surface2);border-radius:var(--radius);padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;margin:0">
+          <input type="checkbox" id="select-all-approval" onchange="selectAllPosts('approval', this.checked)"/> Seleccionar todos
+        </label>
+        <span id="approval-selected-count" style="font-size:11px;color:var(--muted)"></span>
+        <button class="btn btn-primary btn-sm" onclick="approveSelected()" >✅ Aprobar todos</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSelected('approval')" style="margin-left:auto">🗑 Borrar seleccionados</button>
+      </div>
       <div id="approval-list"></div>
     </div>
 
@@ -532,6 +694,8 @@ select option{background:var(--surface2)}textarea{resize:vertical}
 </div>
 
 <script>
+
+
 const APIFY_PROXY = '/api/apify';
 const OPENAI_EDIT_IMG = '/api/openai/edit-image';
 const GEMINI_EDIT_IMG = '/api/gemini/edit-image';
@@ -657,6 +821,12 @@ async function startScraping(){
   updateApifyDot(true);
   dbSavePosts(); // Guardar en DB
   btn.disabled=false; btn.innerHTML='🔄 Scrapear de nuevo';
+  
+  // Si auto editor está encendido, editar automáticamente
+  if(sectionState.editor) {
+    autoLog('✅ Scraping completado', 'scraper');
+    setTimeout(() => autoEditPosts(), 1000);
+  }
 }
 
 function cardImg(imageUrl,title){
@@ -710,29 +880,158 @@ function renderEditorList(){
   const pending=state.posts.filter(p=>p.status==='scraped');
   if(!pending.length){e.style.display='block';c.innerHTML='';b.style.display='none';return;}
   e.style.display='none'; b.style.display='inline-block'; b.textContent=pending.length;
-  c.innerHTML=`<div class="card"><div class="card-title">✨ Listos para editar (${pending.length})</div>
-  <div style="display:flex;flex-direction:column;gap:16px;margin-top:8px">${pending.map((p,idx)=>`
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
-      ${(p.imageEdited||p.imageUrl)?`
-      <div style="width:100%;max-height:320px;overflow:hidden;cursor:pointer;position:relative;background:#111;display:flex;align-items:center;justify-content:center" onclick="openLB('${esc(p.imageEdited||p.imageUrl)}','${esc((p.titleEdited||p.title).substring(0,60))}')">
-        <img src="${p.imageEdited||p.imageUrl}" style="width:100%;object-fit:contain;max-height:320px;display:block" onerror="this.parentElement.style.display='none'" ${p.imageEdited?'style="filter:saturate(1.2) contrast(1.1)"':''}/>
-        <span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.65);color:#fff;font-size:10px;padding:2px 8px;border-radius:6px">🔍 Ampliar</span>
-        ${p.imageEdited?'<span style="position:absolute;top:8px;left:8px;background:var(--green);color:#fff;font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700">✓ Editado</span>':''}
-      </div>`:''}
-      <div style="padding:12px">
-        <div style="font-size:12px;color:var(--text);margin-bottom:8px;line-height:1.6">
-          <span id="editor-text-short-${idx}">${(p.titleEdited||p.title).substring(0,140)}${(p.titleEdited||p.title).length>140?`<span class="see-more-btn" onclick="toggleEditorText(${idx})"> Ver más</span>`:''}</span>
-          <span id="editor-text-full-${idx}" style="display:none">${p.titleEdited||p.title}<span class="see-more-btn" onclick="toggleEditorText(${idx})"> Ver menos</span></span>
-          ${p.titleEdited?`<div style="margin-top:4px;font-size:10px;color:var(--accent);font-weight:600">✨ Título reescrito</div>`:''}
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <div style="font-size:11px;color:var(--muted)">❤️ ${p.reactions.toLocaleString()} · ${p.date}</div>
-          <button class="btn btn-primary btn-sm" onclick="openDetail('${p.id}')">🤖 Editar con IA</button>
-        </div>
+  
+  // Get auto prompt if set
+  const autoPrompt = document.getElementById('auto-img-prompt')?.value?.trim() || '';
+  
+  c.innerHTML = pending.map((p,idx) => `
+    <div id="editor-card-${p.id}" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:16px">
+      
+      <!-- Image slider comparison -->
+      <div id="slider-wrap-${p.id}" style="position:relative;width:100%;background:#111;overflow:hidden;user-select:none;touch-action:none;min-height:200px">
+        ${p.imageUrl ? `
+          <!-- After image (full width, behind) -->
+          <img src="${p.imageEdited||p.imageUrl}" id="img-after-${p.id}" style="width:100%;display:block;max-height:300px;object-fit:contain"/>
+          <!-- Before image (clipped) -->
+          <div id="clip-before-${p.id}" style="position:absolute;top:0;left:0;width:50%;height:100%;overflow:hidden;pointer-events:none">
+            <img src="${p.imageUrl}" style="width:100%;max-height:300px;object-fit:contain;display:block" id="img-before-${p.id}"/>
+          </div>
+          <!-- Labels -->
+          <span style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,0.7);color:#fff;font-size:9px;padding:2px 7px;border-radius:4px;pointer-events:none">ORIGINAL</span>
+          <span style="position:absolute;top:8px;right:8px;background:${p.imageEdited?'var(--green)':'rgba(0,0,0,0.5)'};color:#fff;font-size:9px;padding:2px 7px;border-radius:4px;pointer-events:none">${p.imageEdited?'✓ EDITADO':'Sin editar'}</span>
+          <!-- Slider line -->
+          <div id="slider-line-${p.id}" style="position:absolute;top:0;left:50%;width:2px;height:100%;background:#fff;pointer-events:none;box-shadow:0 0 4px rgba(0,0,0,0.8)">
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:32px;height:32px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);font-size:14px">⇔</div>
+          </div>
+          <!-- Touch/drag area -->
+          <div style="position:absolute;inset:0;cursor:ew-resize" 
+            onmousedown="startSlider(event,'${p.id}')" 
+            ontouchstart="startSlider(event,'${p.id}')">
+          </div>
+        ` : '<div style="padding:40px;color:var(--muted);font-size:12px;text-align:center">Sin imagen</div>'}
       </div>
-    </div>`).join('')}
-  </div></div>`;
+
+      <!-- Title -->
+      <div style="padding:10px 12px;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--text);line-height:1.5">${(p.titleEdited||p.title).substring(0,120)}${(p.titleEdited||p.title).length>120?'...':''}</div>
+        ${p.titleEdited ? '<div style="font-size:10px;color:var(--accent);margin-top:2px">✨ Título reescrito</div>' : ''}
+      </div>
+
+      <!-- Prompt + buttons -->
+      <div style="padding:10px 12px">
+        <textarea id="prompt-${p.id}" style="width:100%;height:70px;font-size:12px;margin-bottom:8px;resize:vertical" placeholder="Escribe instrucciones de edición...">${autoPrompt}</textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="btn-edit-${p.id}" class="btn btn-sm" onclick="editPostInline('${p.id}')" style="background:linear-gradient(135deg,#4285f4,#34a853);color:#fff;border:none;border-radius:var(--radius);padding:8px 14px;cursor:pointer;font-size:12px;font-weight:600;flex:1">🔮 Gemini</button>
+          <button id="btn-gpt-${p.id}" class="btn btn-sm" onclick="editPostInlineChatGPT('${p.id}')" style="background:linear-gradient(135deg,#10a37f,#1a7f64);color:#fff;border:none;border-radius:var(--radius);padding:8px 14px;cursor:pointer;font-size:12px;font-weight:600;flex:1">🤖 ChatGPT</button>
+          <button class="btn btn-ghost btn-sm" onclick="rewriteTitle('${p.id}')" style="font-size:12px">✍️ Reescribir</button>
+          <button class="btn btn-primary btn-sm" id="btn-approve-${p.id}" onclick="approvePostDirect('${p.id}')" style="font-size:12px" ${p.imageEdited?'':'disabled'}>✅ Aprobar</button>
+        </div>
+        <div id="edit-status-${p.id}" style="font-size:11px;color:var(--muted);margin-top:6px;display:none"></div>
+      </div>
+    </div>
+  `).join('');
 }
+
+async function editPostInline(id) {
+  const p = state.posts.find(x=>String(x.id)===String(id));
+  if(!p) return;
+  const prompt = document.getElementById('prompt-'+id)?.value?.trim();
+  if(!prompt){toast('Escribe las instrucciones');return;}
+  
+  const btn = document.getElementById('btn-edit-'+id);
+  const status = document.getElementById('edit-status-'+id);
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Editando...';
+  status.style.display='block'; status.textContent='🔮 Enviando a Gemini...';
+  
+  try{
+    const res = await fetch('/api/gemini/edit-image',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({imageUrl:p.imageUrl, prompt})
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    const b64 = data.data?.[0]?.b64_json;
+    if(!b64) throw new Error('Sin imagen');
+    
+    p.imageEdited = 'data:image/png;base64,'+b64;
+    p.aiImproved = true;
+    status.innerHTML='<span style="color:var(--green)">✅ Editada con Gemini</span>';
+    
+    // Update slider with new image
+    updateSliderAfter(id, p.imageEdited);
+    const approveBtn = document.getElementById('btn-approve-'+id);
+    if(approveBtn) approveBtn.disabled=false;
+    dbSavePosts();
+  }catch(e){
+    status.innerHTML='<span style="color:var(--red)">❌ '+e.message+'</span>';
+  }
+  btn.disabled=false; btn.innerHTML='🔮 Gemini';
+}
+
+async function editPostInlineChatGPT(id) {
+  const p = state.posts.find(x=>String(x.id)===String(id));
+  if(!p) return;
+  const prompt = document.getElementById('prompt-'+id)?.value?.trim();
+  if(!prompt){toast('Escribe las instrucciones');return;}
+  
+  const btn = document.getElementById('btn-gpt-'+id);
+  const status = document.getElementById('edit-status-'+id);
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Editando...';
+  status.style.display='block'; status.textContent='🤖 Enviando a ChatGPT...';
+  
+  try{
+    const res = await fetch(OPENAI_EDIT_IMG,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({imageUrl:p.imageUrl, prompt})
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error.message||JSON.stringify(data.error));
+    const b64 = data.data?.[0]?.b64_json;
+    if(!b64) throw new Error('Sin imagen');
+    
+    p.imageEdited = 'data:image/png;base64,'+b64;
+    p.aiImproved = true;
+    status.innerHTML='<span style="color:var(--green)">✅ Editada con ChatGPT</span>';
+    
+    updateSliderAfter(id, p.imageEdited);
+    const approveBtn = document.getElementById('btn-approve-'+id);
+    if(approveBtn) approveBtn.disabled=false;
+    dbSavePosts();
+  }catch(e){
+    status.innerHTML='<span style="color:var(--red)">❌ '+e.message+'</span>';
+  }
+  btn.disabled=false; btn.innerHTML='🤖 ChatGPT';
+}
+
+async function rewriteTitle(id) {
+  const p = state.posts.find(x=>String(x.id)===String(id));
+  if(!p) return;
+  const status = document.getElementById('edit-status-'+id);
+  status.style.display='block'; status.textContent='✍️ Reescribiendo título...';
+  try{
+    const res = await fetch('/api/openai/rewrite',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt:'Reescribe viral para Facebook en español, 2-3 líneas con emojis, sin hashtags: "'+p.title+'"'})
+    });
+    const data = await res.json();
+    const newTitle = data.choices?.[0]?.message?.content?.trim();
+    if(newTitle){ p.titleEdited=newTitle; renderEditorList(); dbSavePosts(); }
+  }catch(e){
+    status.innerHTML='<span style="color:var(--red)">❌ '+e.message+'</span>';
+  }
+}
+
+function approvePostDirect(id) {
+  const p = state.posts.find(x=>String(x.id)===String(id));
+  if(!p || !p.imageEdited) return;
+  p.status = 'pending_approval';
+  if(!state.pendingApproval.find(pa=>String(pa.id)===String(id))){
+    state.pendingApproval.push({...p});
+  }
+  renderEditorList(); renderApprovalList(); updateCounters(); dbSavePosts();
+  toast('✅ Enviado a Aprobación');
+}
+
 
 function toggleEditorText(idx){
   const short=document.getElementById('editor-text-short-'+idx);
@@ -767,13 +1066,13 @@ function openDetail(id){
     beforeWrap.innerHTML=`<div class="compare-placeholder">📷<span>Sin imagen</span></div>`;
   }
   // After
-  document.getElementById('ed-after').innerHTML=`<div class="compare-placeholder">🤖<span>Presiona "Editar con gpt-image-1"</span></div>`;
+  document.getElementById('ed-after').innerHTML=`<div class="compare-placeholder">🤖<span>Presiona "Editar con Gemini"</span></div>`;
   document.getElementById('ai-progress').style.display='none';
   document.getElementById('ai-result').style.display='none';
   document.getElementById('ed-actions').style.display='none';
   document.getElementById('ai-extra').value='';
   document.getElementById('btn-ai').disabled=false;
-  document.getElementById('btn-ai').innerHTML='🤖 Editar imagen con gpt-image-1';
+  document.getElementById('btn-ai').innerHTML='🤖 Editar imagen con Gemini';
 }
 
 function closeDetail(){
@@ -943,7 +1242,7 @@ Respond ONLY with a valid JSON object (no markdown, no code blocks):
   "text_to_restyle": "what text exists or null",
   "should_change_clothing_color": true/false,
   "clothing_color_change": "subtle hue shift description or null",
-  "edit_prompt": "A precise, detailed English prompt for gpt-image-1. Describe every subtle change clearly. Start with: Subtly redesign this image while keeping all people, faces, text content, and main subjects completely intact. Then list each specific change."
+  "edit_prompt": "A precise, detailed English prompt for Gemini. Describe every subtle change clearly. Start with: Subtly redesign this image while keeping all people, faces, text content, and main subjects completely intact. Then list each specific change."
 }`;
 
     document.getElementById('ai-pbar').style.width='35%';
@@ -966,7 +1265,7 @@ Respond ONLY with a valid JSON object (no markdown, no code blocks):
     }
 
     document.getElementById('ai-pbar').style.width='55%';
-    document.getElementById('ai-status').textContent='Aplicando ediciones con gpt-image-1...';
+    document.getElementById('ai-status').textContent='Aplicando ediciones con Gemini...';
 
     // Update overlay with detected changes
     const detectedChanges = [
@@ -1054,6 +1353,158 @@ Respond ONLY with a valid JSON object (no markdown, no code blocks):
   updateCounters();
 }
 
+async function runChatGPT(){
+  if(!state.selectedPost) return;
+  if(!state.selectedPost.imageUrl){toast('Este post no tiene imagen');return;}
+  const extra = document.getElementById('ai-extra')?.value?.trim();
+  if(!extra){toast('Escribe las instrucciones');return;}
+
+  const btn = document.getElementById('btn-chatgpt');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> gpt-image-1...';
+  document.getElementById('ai-progress').style.display='block';
+  document.getElementById('ai-result').style.display='none';
+  document.getElementById('ed-actions').style.display='none';
+
+  document.getElementById('ed-after').innerHTML=`
+    <div class="processing-wrap">
+      <img class="orig-img" src="${state.selectedPost.imageUrl}" onerror="this.style.display='none'"/>
+      <div class="processing-content">
+        <span class="spin"></span>
+        <p>🤖 gpt-image-1 editando...<br><span style="font-size:11px;opacity:0.6">~20-40 segundos</span></p>
+      </div>
+    </div>`;
+
+  let pct=10;
+  document.getElementById('ai-pbar').style.width='10%';
+  document.getElementById('ai-status').textContent='Enviando a ChatGPT...';
+  const stepInterval=setInterval(()=>{
+    pct=Math.min(pct+8,88);
+    document.getElementById('ai-pbar').style.width=pct+'%';
+    document.getElementById('ai-status').textContent=pct<40?'Enviando imagen...':pct<70?'gpt-image-1 procesando...':'Aplicando cambios...';
+  },4000);
+
+  try{
+    const res=await fetch(OPENAI_EDIT_IMG,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({imageUrl:state.selectedPost.imageUrl, prompt:extra})
+    });
+    clearInterval(stepInterval);
+    document.getElementById('ai-pbar').style.width='100%';
+    document.getElementById('ai-status').textContent='¡Imagen lista!';
+
+    const data=await res.json();
+    if(data.error) throw new Error(data.error.message||JSON.stringify(data.error));
+
+    const imgData=data.data?.[0];
+    let src='';
+    if(imgData?.b64_json){ src='data:image/png;base64,'+imgData.b64_json; }
+    else if(imgData?.url){ src=imgData.url; }
+    else { throw new Error('No se recibió imagen'); }
+
+    state.selectedPost.imageEdited=src;
+    state.selectedPost.aiImproved=true;
+
+    document.getElementById('ed-after').innerHTML=`
+      <div class="result-img-wrap" onclick="openLB('${esc(src)}','ChatGPT gpt-image-1')">
+        <img src="${src}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌</div>'"/>
+        <span class="zoom-hint">🔍 Ampliar</span>
+        <span class="img-badge img-badge-green">🤖 ChatGPT</span>
+      </div>`;
+
+    document.getElementById('ai-result').style.display='block';
+    document.getElementById('ai-result').innerHTML='<span style="color:var(--green);font-weight:600">✅ Editado con gpt-image-1</span>';
+    document.getElementById('btn-download-edited').style.display='inline-flex';
+
+  }catch(e){
+    clearInterval(stepInterval);
+    document.getElementById('ed-after').innerHTML='<div class="compare-placeholder">❌<span style="font-size:11px;padding:0 16px;text-align:center">'+e.message+'</span></div>';
+    document.getElementById('ai-result').style.display='block';
+    document.getElementById('ai-result').innerHTML='<span style="color:var(--red)">❌ '+e.message+'</span>';
+  }
+
+  document.getElementById('ed-actions').style.display='flex';
+  btn.disabled=false; btn.innerHTML='🤖 Editar con ChatGPT (gpt-image-1)';
+  updateCounters();
+}
+
+async function runAIWeb(){
+  if(!state.selectedPost) return;
+  if(!state.selectedPost.imageUrl){toast('Este post no tiene imagen');return;}
+  const extra = document.getElementById('ai-extra')?.value?.trim();
+  if(!extra){toast('Escribe las instrucciones');return;}
+
+  const btn = document.getElementById('btn-ai-web');
+  const btnApi = document.getElementById('btn-ai');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Gemini Web...';
+  if(btnApi) btnApi.disabled=true;
+  document.getElementById('ai-progress').style.display='block';
+  document.getElementById('ai-result').style.display='none';
+  document.getElementById('ed-actions').style.display='none';
+
+  document.getElementById('ed-after').innerHTML=`
+    <div class="processing-wrap">
+      <img class="orig-img" src="${state.selectedPost.imageUrl}" onerror="this.style.display='none'"/>
+      <div class="processing-content">
+        <span class="spin"></span>
+        <p>🌐 Gemini Web procesando...<br><span style="font-size:11px;opacity:0.6">~30-60 segundos</span></p>
+      </div>
+    </div>`;
+
+  let pct=5;
+  document.getElementById('ai-pbar').style.width='5%';
+  document.getElementById('ai-status').textContent='Abriendo Gemini Web...';
+  const stepInterval=setInterval(()=>{
+    pct=Math.min(pct+3,88);
+    document.getElementById('ai-pbar').style.width=pct+'%';
+    const msgs=['Abriendo Gemini...','Subiendo imagen...','Escribiendo prompt...','Esperando resultado...','Descargando imagen...'];
+    document.getElementById('ai-status').textContent=msgs[Math.min(Math.floor(pct/20),4)];
+  },3000);
+
+  try{
+    const res=await fetch('/api/gemini/edit-web',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({imageUrl:state.selectedPost.imageUrl, prompt:extra})
+    });
+    clearInterval(stepInterval);
+    document.getElementById('ai-pbar').style.width='100%';
+    document.getElementById('ai-status').textContent='¡Imagen lista!';
+
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+
+    const imgData=data.data?.[0];
+    let src='';
+    if(imgData?.b64_json){ src='data:image/png;base64,'+imgData.b64_json; }
+    else if(imgData?.url){ src=imgData.url; }
+    else { throw new Error('No se recibió imagen'); }
+
+    state.selectedPost.imageEdited=src;
+    state.selectedPost.aiImproved=true;
+
+    document.getElementById('ed-after').innerHTML=`
+      <div class="result-img-wrap" onclick="openLB('${esc(src)}','Gemini Web')">
+        <img src="${src}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌</div>'"/>
+        <span class="zoom-hint">🔍 Ampliar</span>
+        <span class="img-badge img-badge-green">🌐 Gemini Web</span>
+      </div>`;
+
+    document.getElementById('ai-result').style.display='block';
+    document.getElementById('ai-result').innerHTML='<span style="color:var(--green);font-weight:600">✅ Editado con Gemini Web</span>';
+    document.getElementById('btn-download-edited').style.display='inline-flex';
+
+  }catch(e){
+    clearInterval(stepInterval);
+    document.getElementById('ed-after').innerHTML='<div class="compare-placeholder">❌<span style="font-size:11px;padding:0 16px;text-align:center">'+e.message+'</span></div>';
+    document.getElementById('ai-result').style.display='block';
+    document.getElementById('ai-result').innerHTML='<span style="color:var(--red)">❌ '+e.message+'</span>';
+  }
+
+  document.getElementById('ed-actions').style.display='flex';
+  btn.disabled=false; btn.innerHTML='🌐 Gemini Web';
+  if(btnApi) btnApi.disabled=false;
+  updateCounters();
+}
+
 async function runAI(provider='openai'){
   if(!state.selectedPost) return;
   if(!state.selectedPost.imageUrl){toast('Este post no tiene imagen');return;}
@@ -1063,16 +1514,16 @@ async function runAI(provider='openai'){
   const btnId = 'btn-ai';
   const btn=document.getElementById(btnId);
   const btnOther=document.getElementById('btn-ai');
-  btn.disabled=true;btn.innerHTML='<span class="spin"></span> gpt-image-1 editando...';
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span> Gemini editando...';
   if(btnOther) btnOther.disabled=true;
   document.getElementById('ai-progress').style.display='block';
   document.getElementById('ai-result').style.display='none';
   document.getElementById('ed-actions').style.display='none';
-  document.getElementById('ed-after').innerHTML=`<div class="processing-wrap"><img class="orig-img" src="${state.selectedPost.imageUrl}" onerror="this.style.display='none'"/><div class="processing-content"><span class="spin"></span><p>gpt-image-1 editando...<br><span style="font-size:11px;opacity:0.6">~20-40 segundos</span></p></div></div>`;
+  document.getElementById('ed-after').innerHTML=`<div class="processing-wrap"><img class="orig-img" src="${state.selectedPost.imageUrl}" onerror="this.style.display='none'"/><div class="processing-content"><span class="spin"></span><p>Gemini editando...<br><span style="font-size:11px;opacity:0.6">~20-40 segundos</span></p></div></div>`;
   let pct=10;
   document.getElementById('ai-pbar').style.width='10%';
   document.getElementById('ai-status').textContent='Enviando imagen...';
-  const stepInterval=setInterval(()=>{pct=Math.min(pct+8,88);document.getElementById('ai-pbar').style.width=pct+'%';document.getElementById('ai-status').textContent=pct<40?'Enviando imagen...':pct<70?'gpt-image-1 procesando...':'Aplicando cambios...';},4000);
+  const stepInterval=setInterval(()=>{pct=Math.min(pct+8,88);document.getElementById('ai-pbar').style.width=pct+'%';document.getElementById('ai-status').textContent=pct<40?'Enviando imagen...':pct<70?'Gemini procesando...':'Aplicando cambios...';},4000);
   try{
     const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageUrl:state.selectedPost.imageUrl,prompt:extra})});
     clearInterval(stepInterval);
@@ -1088,7 +1539,7 @@ async function runAI(provider='openai'){
     else{throw new Error('Gemini no devolvió imagen: '+JSON.stringify(data).substring(0,100));}
     state.selectedPost.imageEdited=editedImgSrc;
     state.selectedPost.aiImproved=true;
-    document.getElementById('ed-after').innerHTML=`<div class="result-img-wrap" onclick="openLB('${esc(editedImgSrc)}','Editado con gpt-image-1')"><img src="${editedImgSrc}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌</div>'"/><span class="zoom-hint">🔍 Ampliar</span><span class="img-badge img-badge-green">✓ gpt-image-1</span></div>`;
+    document.getElementById('ed-after').innerHTML=`<div class="result-img-wrap" onclick="openLB('${esc(editedImgSrc)}','Editado con Gemini')"><img src="${editedImgSrc}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌</div>'"/><span class="zoom-hint">🔍 Ampliar</span><span class="img-badge img-badge-green">✓ Gemini</span></div>`;
     document.getElementById('ai-result').style.display='block';
     document.getElementById('ai-result').innerHTML='<span style="color:var(--green);font-weight:600">✓ Imagen editada exitosamente</span>';
     document.getElementById('btn-download-edited').style.display='inline-flex';
@@ -1133,6 +1584,10 @@ function renderApprovalList(){
   e.style.display='none';
   c.innerHTML=pending.map(p=>`
     <div class="card">
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;border-bottom:1px solid var(--border);padding-bottom:8px">
+        <input type="checkbox" class="approval-check" onchange="togglePostSelect('approval','${p.id}',this.checked)" style="width:16px;height:16px"/>
+        <span style="font-size:11px;color:var(--muted)">Seleccionar</span>
+      </label>
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px">
         <div style="font-size:13px;font-weight:600;flex:1;line-height:1.5">${(p.titleEdited||p.title).substring(0,130)}</div>
         <span class="tag tag-pending">Pendiente</span>
@@ -1143,12 +1598,12 @@ function renderApprovalList(){
           ${p.imageUrl?`<div class="compare-img-wrap" onclick="openLB('${esc(p.imageUrl)}','Original')"><img src="${p.imageUrl}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>📷</div>'"/><span class="zoom-hint">🔍 Ampliar</span></div>`:`<div class="compare-placeholder">📷</div>`}
         </div>
         <div class="compare-box">
-          <div class="compare-label">Editado con gpt-image-1</div>
+          <div class="compare-label">Editado con Gemini</div>
           ${p.imageEdited?`<div class="compare-img-wrap" onclick="openLB('${esc(p.imageEdited)}','Editado')"><img src="${p.imageEdited}" onerror="this.parentElement.innerHTML='<div class=compare-placeholder>❌</div>'"/><span class="zoom-hint">🔍 Ampliar</span><span class="img-badge img-badge-green">✓ AI</span></div>`:`<div class="compare-placeholder">📷<span>Sin editar</span></div>`}
         </div>
       </div>
       <label>Caption</label>
-      <textarea id="cap-${p.id}" style="height:80px;margin-bottom:12px">${(p.titleEdited||p.title).substring(0,120)} 🔥\n\n¡Comparte si te sorprendió!</textarea>
+      <textarea id="cap-${p.id}" style="height:80px;margin-bottom:12px">${p.titleEdited||p.title}</textarea>
       <div style="margin-bottom:14px">
         <div id="cal-display-${p.id}" class="cal-trigger" onclick="openCal('${p.id}')">
           <span>📅</span> <span id="cal-label-${p.id}">Seleccionar fecha y hora para programar</span>
@@ -1156,7 +1611,8 @@ function renderApprovalList(){
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-danger btn-sm" onclick="rejectPost('${p.id}')">✕ Rechazar</button>
-        <button class="btn btn-success btn-sm" onclick="publishPost('${p.id}')">🚀 Publicar ahora</button>
+        <button class="btn btn-primary btn-sm" onclick="approveForQueue('${p.id}')">✅ Aprobar para publicar</button>
+        <button class="btn btn-sm" onclick="approveForQueueNow('${p.id}')" style="background:var(--amber);color:#000;border:none;border-radius:var(--radius);padding:8px 12px;cursor:pointer;font-size:12px;font-weight:700">⚡ Publicar ahora</button>
       </div>
     </div>`).join('');
 }
@@ -1201,6 +1657,68 @@ async function schedulePost(id, dateStr){
     toast('Error: '+e.message);
   }
 }
+async function publishBusiness(id){
+  const p = state.pendingApproval.find(x=>String(x.id)===String(id));
+  if(!p) return;
+  const caption = document.getElementById('cap-'+id)?.value || p.titleEdited || p.title;
+  const imageSrc = p.imageEdited || p.imageUrl || '';
+
+  const btn = document.querySelector(`[onclick="publishBusiness('${id}')"]`);
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span> Publicando...'; }
+  toast('🏢 Business autopublicador iniciado...');
+
+  try{
+    const res = await fetch('/api/publish-business', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ caption, imageSrc })
+    });
+    const data = await res.json();
+    if(data.success){
+      p.status = 'published';
+      renderApprovalList(); renderPublishList(); updateCounters();
+      dbSavePosts();
+      toast('✅ Publicado via Business!');
+    } else {
+      toast('❌ Error: ' + (data.error || 'No se pudo publicar'));
+    }
+  } catch(e){
+    toast('❌ Error: ' + e.message);
+  }
+  if(btn){ btn.disabled=false; btn.innerHTML='🏢 Business'; }
+}
+
+async function publishBrowser(id){
+  const p = state.pendingApproval.find(x=>String(x.id)===String(id));
+  if(!p) return;
+  const caption = document.getElementById('cap-'+id)?.value || p.titleEdited || p.title;
+  const imageSrc = p.imageEdited || p.imageUrl || '';
+  const pageId = document.getElementById('fb-page-id')?.value || '144014865956958';
+
+  const btn = document.querySelector(`[onclick="publishBrowser('${id}')"]`);
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span> Publicando...'; }
+
+  toast('🌐 Autopublicador iniciado...');
+
+  try{
+    const res = await fetch('/api/publish-browser', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pageId, pageName: 'Miltoner', caption, imageSrc })
+    });
+    const data = await res.json();
+    if(data.success){
+      p.status = 'published';
+      renderApprovalList(); renderPublishList(); updateCounters();
+      dbSavePosts();
+      toast('✅ Publicado via navegador exitosamente!');
+    } else {
+      toast('❌ Error: ' + (data.error || 'No se pudo publicar'));
+    }
+  } catch(e){
+    toast('❌ Error: ' + e.message);
+  }
+  if(btn){ btn.disabled=false; btn.innerHTML='🌐 Publicar via Navegador'; }
+}
+
 async function publishPost(id){
   const p=state.pendingApproval.find(x=>String(x.id)===String(id));
   const token=document.getElementById('fb-token').value;
@@ -1450,6 +1968,520 @@ const calModalEl = document.getElementById('cal-modal'); if(calModalEl) calModal
   if(e.target === this) closeCal();
 });
 
+// ===== AUTO MODE ENGINE =====
+let autoMode = {
+  enabled: false,
+  scrapeTimer: null,
+  publishTimer: null,
+  stats: { scraped: 0, edited: 0, published: 0 },
+  publishQueue: [], // [{id, priority, addedAt}]
+  processedIds: new Set(), // IDs ya procesados
+};
+
+async function saveAutoConfig() {
+  const cfg = {
+    autoEnabled: autoMode.enabled,
+    scrapeMin: document.getElementById('auto-scrape-min')?.value || '5',
+    scrapeMax: document.getElementById('auto-scrape-max')?.value || '15',
+    pubMin: document.getElementById('auto-pub-min')?.value || '10',
+    pubMax: document.getElementById('auto-pub-max')?.value || '30',
+    imgPrompt: document.getElementById('auto-img-prompt')?.value || ''
+  };
+  // Save to localStorage
+  localStorage.setItem('viralpanel_auto', JSON.stringify(cfg));
+  // Save to MongoDB
+  try {
+    await fetch('/api/config/save', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ autoConfig: cfg })
+    });
+    toast('💾 Configuración automática guardada ✓');
+    autoLog('💾 Configuración guardada', 'scraper'); autoLog('💾 Config guardada', 'editor'); autoLog('💾 Config guardada', 'approval');
+  } catch(e) {
+    toast('💾 Guardado localmente');
+  }
+}
+
+function loadAutoConfig() {
+  try {
+    const saved = localStorage.getItem('viralpanel_auto');
+    if (!saved) return;
+    const cfg = JSON.parse(saved);
+    
+    const scrapeMin = document.getElementById('auto-scrape-min');
+    const scrapeMax = document.getElementById('auto-scrape-max');
+    const pubMin = document.getElementById('auto-pub-min');
+    const pubMax = document.getElementById('auto-pub-max');
+    const imgPrompt = document.getElementById('auto-img-prompt');
+    
+    if(scrapeMin && cfg.scrapeMin) scrapeMin.value = cfg.scrapeMin;
+    if(scrapeMax && cfg.scrapeMax) scrapeMax.value = cfg.scrapeMax;
+    if(pubMin && cfg.pubMin) pubMin.value = cfg.pubMin;
+    if(pubMax && cfg.pubMax) pubMax.value = cfg.pubMax;
+    if(imgPrompt && cfg.imgPrompt) imgPrompt.value = cfg.imgPrompt;
+    
+    // Restore auto mode state
+    if (cfg.autoEnabled) {
+      autoLog('♻️ Restaurando...', 'scraper');
+      toggleAutoMode();
+    }
+    
+    console.log('✓ Config automática cargada');
+  } catch(e) {
+    console.log('Error cargando config auto:', e);
+  }
+}
+
+
+
+function autoLog(msg, section) {
+  // section: 'scraper', 'editor', 'approval' or undefined (all)
+  const logIds = section ? ['auto-'+section+'-log'] : ['auto-scraper-log','auto-editor-log','auto-approval-log'];
+  const time = new Date().toLocaleTimeString('es-MX');
+  logIds.forEach(id => {
+    const log = document.getElementById(id);
+    if(log) {
+      log.innerHTML += '<div><span style="color:var(--accent)">['+time+']</span> '+msg+'</div>';
+      log.scrollTop = log.scrollHeight;
+    }
+  });
+}
+
+function clearLog(logId) {
+  const log = document.getElementById(logId);
+  if(log) log.innerHTML = '<div>Log limpiado...</div>';
+}
+
+function updateAutoStats() {
+  const s = document.getElementById('auto-stat-scraped');
+  const e = document.getElementById('auto-stat-edited');
+  const p = document.getElementById('auto-stat-published');
+  if(s) s.textContent = autoMode.stats.scraped;
+  if(e) e.textContent = autoMode.stats.edited;
+  if(p) p.textContent = autoMode.stats.published;
+}
+
+function toggleAutoMode() {
+  autoMode.enabled = !autoMode.enabled;
+  const btn = document.getElementById('auto-toggle-btn');
+  const dot = document.getElementById('auto-dot');
+  const label = document.getElementById('auto-label');
+  const panel = document.getElementById('auto-config-panel');
+  const badge = document.getElementById('auto-running-badge');
+
+  if (autoMode.enabled) {
+    btn.style.borderColor = '#22c55e';
+    btn.style.background = 'rgba(34,197,94,0.1)';
+    dot.style.background = '#22c55e';
+    label.style.color = '#22c55e';
+    // Update desktop button
+    const dotD = document.getElementById('auto-dot-desktop');
+    const labelD = document.getElementById('auto-label-desktop');
+    const btnD = document.getElementById('auto-toggle-btn-desktop');
+    if(dotD) dotD.style.background = '#22c55e';
+    if(labelD){ labelD.style.color = '#22c55e'; labelD.textContent = 'AUTO ENCENDIDO'; }
+    if(btnD){ btnD.style.borderColor = '#22c55e'; btnD.style.background = 'rgba(34,197,94,0.1)'; }
+    // Show all auto panels
+    ['auto-scraper-panel','auto-editor-panel','auto-approval-panel'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = 'block';
+    });
+    ['auto-scraper-badge','auto-editor-badge','auto-approval-badge'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = 'block';
+    });
+    autoLog('🚀 AUTO ACTIVADO', 'scraper'); autoLog('🚀 AUTO ACTIVADO', 'editor'); autoLog('🚀 AUTO ACTIVADO', 'approval');
+    startAutoScrape();
+    startAutoPublish();
+    toast('⚡ Modo automático activado');
+  } else {
+    btn.style.borderColor = 'var(--border2)';
+    btn.style.background = 'var(--surface2)';
+    dot.style.background = 'var(--muted)';
+    label.style.color = 'var(--muted)';
+    // Update desktop button
+    const dotD = document.getElementById('auto-dot-desktop');
+    const labelD = document.getElementById('auto-label-desktop');
+    const btnD = document.getElementById('auto-toggle-btn-desktop');
+    if(dotD) dotD.style.background = 'var(--muted)';
+    if(labelD){ labelD.style.color = 'var(--muted)'; labelD.textContent = 'AUTO APAGADO'; }
+    if(btnD){ btnD.style.borderColor = 'var(--border2)'; btnD.style.background = 'var(--surface2)'; }
+    // Hide all auto panels
+    ['auto-scraper-panel','auto-editor-panel','auto-approval-panel'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = 'none';
+    });
+    ['auto-scraper-badge','auto-editor-badge','auto-approval-badge'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = 'none';
+    });
+    stopAutoMode();
+    autoLog('⏹ AUTO APAGADO', 'scraper'); autoLog('⏹ AUTO APAGADO', 'editor'); autoLog('⏹ AUTO APAGADO', 'approval');
+    saveAutoConfig();
+    toast('⏹ Modo automático desactivado');
+  }
+}
+
+function stopAutoMode() {
+  if(autoMode.scrapeTimer) clearTimeout(autoMode.scrapeTimer);
+  if(autoMode.publishTimer) clearTimeout(autoMode.publishTimer);
+  autoMode.scrapeTimer = null;
+  autoMode.publishTimer = null;
+}
+
+function randomBetween(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// AUTO SCRAPING
+async function startAutoScrape() {
+  if (!autoMode.enabled) return;
+  autoLog('🔍 Iniciando scraping...', 'scraper');
+  await runAutoScrape();
+}
+
+async function runAutoScrape() {
+  if (!sectionState.scraper) return;
+
+  const minVal = parseInt(document.getElementById('auto-scrape-min')?.value || 5);
+  const maxVal = parseInt(document.getElementById('auto-scrape-max')?.value || 15);
+  const nextIn = randomBetween(minVal, maxVal);
+
+  try {
+    const pages = state.pages;
+    if (!pages || pages.length === 0) {
+      autoLog('⚠️ Sin páginas configuradas', 'scraper');
+    } else {
+      autoLog('📥 Scrapeando '+pages.length+' páginas...', 'scraper');
+      const apifyToken = document.getElementById('apify-token')?.value;
+      if (!apifyToken) { autoLog('⚠️ Sin token de Apify', 'scraper'); }
+      else {
+        // Run scraper - just click the button, it will trigger autoEditPosts when done
+        autoLog('🔍 Iniciando scraper...', 'scraper');
+        const postsCount = state.posts.length;
+        // Click the scrape button programmatically
+        const scrapeBtn = document.getElementById('btn-scrape');
+        if(scrapeBtn && !scrapeBtn.disabled) {
+          scrapeBtn.click();
+          autoLog('✅ Scraper iniciado...', 'scraper');
+        } else {
+          autoLog('⚠️ Scraper ocupado', 'scraper');
+        }
+      }
+    }
+  } catch(e) {
+    autoLog('❌ Error: ' + e.message, 'scraper');
+  }
+
+  autoLog('⏰ Próximo scraping en '+nextIn+' min', 'scraper');
+  autoMode.scrapeTimer = setTimeout(runAutoScrape, nextIn * 60 * 1000);
+}
+
+// AUTO EDITING - Works like a human clicking each post
+async function autoEditPosts() {
+  // editor section must be on OR called directly
+  const prompt = document.getElementById('auto-img-prompt')?.value?.trim();
+  if (!prompt) { autoLog('⚠️ Sin prompt configurado', 'editor'); return; }
+
+  const toProcess = state.posts.filter(p => 
+    !autoMode.processedIds.has(String(p.id)) && 
+    p.status === 'scraped' &&
+    !state.pendingApproval.find(pa => String(pa.id) === String(p.id))
+  );
+
+  if(toProcess.length === 0) { autoLog('ℹ️ Sin posts nuevos', 'editor'); return; }
+  autoLog('✏️ Procesando '+toProcess.length+' posts...', 'editor');
+
+  for (const post of toProcess) {
+    // continue processing
+    try {
+      autoLog('🔮 Editando: '+post.title?.substring(0,35)+'...', 'editor');
+
+      // Edit image with Gemini
+      if (post.imageUrl) {
+        autoLog('🖼️ Enviando a Gemini...', 'editor');
+        // Send prompt in simple English to avoid Gemini tool errors
+        const simplePrompt = prompt.length > 0 ? prompt : 'improve image quality, enhance colors';
+        const imgRes = await fetch('/api/gemini/edit-image', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ imageUrl: post.imageUrl, prompt: simplePrompt })
+        });
+        const imgData = await imgRes.json();
+        if (imgData.data?.[0]?.b64_json) {
+          post.imageEdited = 'data:image/png;base64,' + imgData.data[0].b64_json;
+          autoLog('✅ Imagen editada', 'editor');
+        } else {
+          autoLog('⚠️ Sin imagen de Gemini: '+(imgData.error||'error'), 'editor');
+        }
+      }
+
+      // Rewrite title
+      if (post.title) {
+        autoLog('✍️ Reescribiendo título...', 'editor');
+        try {
+          const rwRes = await fetch('/api/openai/rewrite', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ prompt: 'Reescribe viral para Facebook en español, 2-3 líneas con emojis, sin hashtags: "'+post.title+'"' })
+          });
+          const rwData = await rwRes.json();
+          const newTitle = rwData.choices?.[0]?.message?.content?.trim();
+          if(newTitle) { post.titleEdited = newTitle; autoLog('✅ Título reescrito', 'editor'); }
+        } catch(e) { post.titleEdited = post.title; }
+      }
+
+      // Only send to approval if image was edited successfully
+      if (post.imageEdited) {
+        post.status = 'pending_approval';
+        post.aiImproved = true;
+        autoMode.processedIds.add(String(post.id));
+        state.pendingApproval = state.pendingApproval.filter(pa => String(pa.id) !== String(post.id));
+        state.pendingApproval.push({...post});
+        autoMode.stats.edited++;
+        updateAutoStats();
+        autoLog('📋 Enviado a Aprobación ✓', 'editor');
+      } else {
+        post.status = 'error';
+        autoMode.processedIds.add(String(post.id));
+        autoLog('⚠️ No enviado — Gemini no devolvió imagen', 'editor');
+      }
+      renderEditorList(); renderApprovalList(); updateCounters(); dbSavePosts();
+      await sleep(5000);
+
+    } catch(e) {
+      autoLog('❌ Error: '+e.message, 'editor');
+      await sleep(2000);
+    }
+  }
+  autoLog('🎉 Completado! '+autoMode.stats.edited+' posts editados', 'editor');
+}
+
+
+// AUTO PUBLISHING QUEUE
+function approveForQueue(id) {
+  const p = state.pendingApproval.find(x=>String(x.id)===String(id));
+  if (!p) return;
+  const caption = document.getElementById('cap-'+id)?.value || p.titleEdited || p.title;
+  p.captionFinal = caption;
+  p.queuedAt = new Date().toISOString();
+  p.priority = false;
+  // Add to queue if not already there
+  if (!autoMode.publishQueue.find(q => q.id === id)) {
+    autoMode.publishQueue.push({ id, priority: false, addedAt: new Date().toISOString() });
+    autoLog('📋 Post añadido a la cola', 'approval');
+    const qc = document.getElementById('auto-queue-count');
+    if(qc) qc.textContent = autoMode.publishQueue.length;
+    toast('✅ Aprobado y añadido a la cola');
+    renderApprovalList();
+  }
+}
+
+function approveForQueueNow(id) {
+  const p = state.pendingApproval.find(x=>String(x.id)===String(id));
+  if (!p) return;
+  const caption = document.getElementById('cap-'+id)?.value || p.titleEdited || p.title;
+  p.captionFinal = caption;
+  p.priority = true;
+  // Remove if already in queue and add at front
+  autoMode.publishQueue = autoMode.publishQueue.filter(q => q.id !== id);
+  autoMode.publishQueue.unshift({ id, priority: true, addedAt: new Date().toISOString() });
+  autoLog('⚡ Prioridad: añadido primero', 'approval');
+  toast('⚡ Añadido con prioridad — publicará primero');
+  renderApprovalList();
+}
+
+// AUTO PUBLISHING
+async function startAutoPublish() {
+  if (!autoMode.enabled) return;
+  autoLog('📤 Sistema iniciado', 'approval');
+  scheduleNextPublish();
+}
+
+function scheduleNextPublish() {
+  if (!sectionState.approval) return;
+  const minVal = parseInt(document.getElementById('auto-pub-min')?.value || 10);
+  const maxVal = parseInt(document.getElementById('auto-pub-max')?.value || 30);
+  const nextIn = randomBetween(minVal, maxVal);
+  autoLog('⏰ Próxima pub en '+nextIn+' min', 'approval');
+  autoMode.publishTimer = setTimeout(runAutoPublish, nextIn * 60 * 1000);
+}
+
+async function runAutoPublish() {
+  if (!sectionState.approval) return;
+  if (autoMode.publishQueue.length === 0) {
+    autoLog('ℹ️ Cola vacía...', 'approval');
+    scheduleNextPublish();
+    return;
+  }
+
+  // Get next post from queue (priority first)
+  const next = autoMode.publishQueue.shift();
+  const p = state.pendingApproval.find(x=>String(x.id)===String(next.id));
+  
+  if (!p) {
+    autoLog('⚠️ Post no encontrado', 'approval');
+    scheduleNextPublish();
+    return;
+  }
+
+  autoLog('📤 Publicando: '+p.title?.substring(0,40)+'...', 'approval');
+
+  try {
+    const token = document.getElementById('fb-token')?.value;
+    const pageId = document.getElementById('fb-page-id')?.value || '144014865956958';
+    const caption = p.captionFinal || p.titleEdited || p.title;
+    const imageSrc = p.imageEdited || p.imageUrl || '';
+
+    // Try browser first, fallback to API
+    let success = false;
+    
+    // Try via browser autopublisher
+    try {
+      const res = await fetch('/api/publish-browser', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ pageId, pageName: 'Miltoner', caption, imageSrc })
+      });
+      const data = await res.json();
+      if (data.success) { success = true; autoLog('✅ Publicado via Navegador'); }
+    } catch(e) {}
+
+    // Fallback to API
+    if (!success && token) {
+      const res = await fetch('/api/publish-facebook', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ pageId, token, caption, imageSrc })
+      });
+      const data = await res.json();
+      if (data.id || data.post_id) { success = true; autoLog('✅ Publicado via API'); }
+    }
+
+    if (success) {
+      p.status = 'published';
+      autoMode.stats.published++;
+      updateAutoStats();
+      renderApprovalList();
+      renderPublishList();
+      updateCounters();
+      dbSavePosts();
+    } else {
+      autoLog('❌ Error, reintentando...', 'approval');
+      autoMode.publishQueue.push(next); // put back in queue
+    }
+  } catch(e) {
+    autoLog('❌ Error: ' + e.message, 'approval');
+    autoMode.publishQueue.push(next);
+  }
+
+  scheduleNextPublish();
+}
+
+// ===== SELECTION & DELETE =====
+let selectedPosts = { scraped: new Set(), editor: new Set(), approval: new Set() };
+
+function selectAllPosts(section, checked) {
+  if (section === 'scraped') {
+    state.posts.forEach(p => checked ? selectedPosts.scraped.add(String(p.id)) : selectedPosts.scraped.delete(String(p.id)));
+    document.querySelectorAll('.scraped-check').forEach(cb => cb.checked = checked);
+    updateSelectedCount('scraped');
+  } else if (section === 'editor') {
+    state.posts.forEach(p => checked ? selectedPosts.editor.add(String(p.id)) : selectedPosts.editor.delete(String(p.id)));
+    document.querySelectorAll('.editor-check').forEach(cb => cb.checked = checked);
+    updateSelectedCount('editor');
+  } else if (section === 'approval') {
+    state.pendingApproval.forEach(p => checked ? selectedPosts.approval.add(String(p.id)) : selectedPosts.approval.delete(String(p.id)));
+    document.querySelectorAll('.approval-check').forEach(cb => cb.checked = checked);
+    updateSelectedCount('approval');
+  }
+}
+
+function togglePostSelect(section, id, checked) {
+  if (checked) selectedPosts[section].add(String(id));
+  else selectedPosts[section].delete(String(id));
+  updateSelectedCount(section);
+}
+
+function updateSelectedCount(section) {
+  const count = selectedPosts[section].size;
+  const el = document.getElementById(section+'-selected-count');
+  if (el) el.textContent = count > 0 ? count+' seleccionados' : '';
+  const toolbar = document.getElementById(section+'-toolbar');
+  if (toolbar) toolbar.style.display = 'flex';
+}
+
+function deleteSelected(section) {
+  const ids = selectedPosts[section];
+  if (ids.size === 0) { toast('Selecciona al menos un post'); return; }
+  if (!confirm('¿Borrar '+ids.size+' posts seleccionados?')) return;
+  
+  if (section === 'scraped' || section === 'editor') {
+    state.posts = state.posts.filter(p => !ids.has(String(p.id)));
+    renderScrapedResults();
+    renderEditorList();
+  } else if (section === 'approval') {
+    state.pendingApproval = state.pendingApproval.filter(p => !ids.has(String(p.id)));
+    renderApprovalList();
+  }
+  selectedPosts[section].clear();
+  updateCounters();
+  dbSavePosts();
+  toast('🗑 '+ids.size+' posts borrados');
+}
+
+function approveSelected() {
+  const ids = selectedPosts.approval;
+  if (ids.size === 0) { toast('Selecciona al menos un post'); return; }
+  ids.forEach(id => approveForQueue(id));
+  toast('✅ '+ids.size+' posts aprobados para publicar');
+}
+
+// ===== BEFORE/AFTER IMAGE SLIDER =====
+let activeSlider = null;
+
+function startSlider(e, id) {
+  e.preventDefault();
+  activeSlider = id;
+  document.addEventListener('mousemove', moveSlider);
+  document.addEventListener('mouseup', stopSlider);
+  document.addEventListener('touchmove', moveSlider, { passive: false });
+  document.addEventListener('touchend', stopSlider);
+  moveSlider(e);
+}
+
+function moveSlider(e) {
+  if (!activeSlider) return;
+  e.preventDefault();
+  const wrap = document.getElementById('slider-wrap-' + activeSlider);
+  if (!wrap) return;
+  const rect = wrap.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  let pct = (clientX - rect.left) / rect.width;
+  pct = Math.max(0.02, Math.min(0.98, pct));
+  const pctStr = (pct * 100).toFixed(1) + '%';
+  const clip = document.getElementById('clip-before-' + activeSlider);
+  const line = document.getElementById('slider-line-' + activeSlider);
+  if (clip) clip.style.width = pctStr;
+  if (line) line.style.left = pctStr;
+}
+
+function stopSlider() {
+  activeSlider = null;
+  document.removeEventListener('mousemove', moveSlider);
+  document.removeEventListener('mouseup', stopSlider);
+  document.removeEventListener('touchmove', moveSlider);
+  document.removeEventListener('touchend', stopSlider);
+}
+
+function updateSliderAfter(id, src) {
+  const imgAfter = document.getElementById('img-after-' + id);
+  const label = document.querySelector('#slider-wrap-' + id + ' span:last-of-type');
+  if (imgAfter) imgAfter.src = src;
+  if (label) { label.textContent = '✓ EDITADO'; label.style.background = 'var(--green)'; }
+  // Fix before image width after update
+  const imgBefore = document.getElementById('img-before-' + id);
+  if (imgBefore && imgAfter) {
+    imgBefore.style.width = imgAfter.offsetWidth + 'px';
+  }
+}
+
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
 // ---- BASE DE DATOS - GUARDAR Y CARGAR ----
@@ -1600,6 +2632,7 @@ function loadConfig(){
 
 // Auto-guardar cuando cambian los campos
 document.addEventListener('DOMContentLoaded', async () => {
+  loadAutoConfig(); // Restaurar config y estado del auto mode
   // Load Gemini key from localStorage
   const savedGeminiKey = localStorage.getItem('gemini_key');
   if(savedGeminiKey){
@@ -1619,6 +2652,51 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Cargar al iniciar
 loadConfig();
+
+// ===== SECTION TOGGLES =====
+function startSection(section) {
+  if (!sectionState[section]) {
+    toast('⚠️ Primero activa el toggle de '+section);
+    return;
+  }
+  autoLog('▶ Iniciando...', section);
+  if(section === 'scraper') startAutoScrape();
+  if(section === 'editor') autoEditPosts();
+  if(section === 'approval') startAutoPublish();
+  toast('▶ Auto '+section+' iniciado');
+}
+
+// ===== SECTION TOGGLES =====
+const sectionState = { scraper: false, editor: false, approval: false };
+
+function toggleSection(section) {
+  sectionState[section] = !sectionState[section];
+  const on = sectionState[section];
+  const dot = document.getElementById('auto-'+section+'-dot');
+  const label = document.getElementById('auto-'+section+'-label');
+  const toggle = document.getElementById('auto-'+section+'-toggle');
+  const config = document.getElementById('auto-'+section+'-config');
+  const colorMap = { scraper: 'var(--accent)', editor: 'var(--amber)', approval: 'var(--green)' };
+  const color = colorMap[section];
+  if (on) {
+    if(toggle){ toggle.style.borderColor = color; toggle.style.background = 'rgba(34,197,94,0.08)'; }
+    if(dot) dot.style.background = color;
+    if(label){ label.style.color = color; label.textContent = 'ENCENDIDO'; }
+    if(config) config.style.display = 'block';
+    autoLog('🚀 Auto '+section+' ACTIVADO — configura y presiona Empezar', section);
+    toast('⚡ Auto '+section+' activado — presiona Empezar cuando estés listo');
+  } else {
+    if(toggle){ toggle.style.borderColor = 'var(--border2)'; toggle.style.background = 'var(--surface3)'; }
+    if(dot) dot.style.background = 'var(--muted)';
+    if(label){ label.style.color = 'var(--muted)'; label.textContent = 'APAGADO'; }
+    if(config) config.style.display = 'none';
+    autoLog('⏹ Auto '+section+' APAGADO', section);
+    if(section === 'scraper' && autoMode.scrapeTimer){ clearTimeout(autoMode.scrapeTimer); autoMode.scrapeTimer=null; }
+    if(section === 'approval' && autoMode.publishTimer){ clearTimeout(autoMode.publishTimer); autoMode.publishTimer=null; }
+    saveAutoConfig();
+    toast('⏹ Auto '+section+' desactivado');
+  }
+}
 </script>
 </body>
 </html>
