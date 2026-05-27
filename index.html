@@ -1421,11 +1421,7 @@ async function runChatGPT(){
       }
       if(!src) throw new Error('Timeout — demasiado tiempo');
     } else throw new Error('Respuesta inesperada');
-    // dummy to fix scope
-    const _unused = '';
-    if(imgData?.b64_json){ src='data:image/png;base64,'+imgData.b64_json; }
-    else if(imgData?.url){ src=imgData.url; }
-    else { throw new Error('No se recibió imagen'); }
+
 
     state.selectedPost.imageEdited=src;
     state.selectedPost.aiImproved=true;
