@@ -621,6 +621,36 @@ select option{background:var(--surface2)}textarea{resize:vertical}
     </div>
 
     <!-- CONFIG -->
+    <div id="sec-logs" class="section">
+      <div class="page-header">
+        <div class="page-title">Logs del sistema</div>
+        <div class="page-sub">Monitorea en tiempo real lo que hace el panel</div>
+      </div>
+
+      <!-- Log tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <button onclick="showLog('all')" id="log-tab-all" class="btn btn-primary btn-sm">📋 Todos</button>
+        <button onclick="showLog('scraper')" id="log-tab-scraper" class="btn btn-ghost btn-sm">🔍 Scraper</button>
+        <button onclick="showLog('editor')" id="log-tab-editor" class="btn btn-ghost btn-sm">✏️ Editor IA</button>
+        <button onclick="showLog('publisher')" id="log-tab-publisher" class="btn btn-ghost btn-sm">📤 Publicador</button>
+        <button onclick="showLog('gemini')" id="log-tab-gemini" class="btn btn-ghost btn-sm">🔮 Gemini</button>
+        <button onclick="showLog('chatgpt')" id="log-tab-chatgpt" class="btn btn-ghost btn-sm">🤖 ChatGPT</button>
+        <button onclick="clearSystemLog()" class="btn btn-ghost btn-sm" style="margin-left:auto">🗑 Limpiar</button>
+      </div>
+
+      <!-- Log display -->
+      <div id="system-log-container" style="background:var(--surface2);border-radius:var(--radius);padding:12px;font-family:monospace;font-size:11px;line-height:1.6;max-height:60vh;overflow-y:auto;border:1px solid var(--border)">
+        <div style="color:var(--muted)">Esperando actividad...</div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px">
+          <input type="checkbox" id="log-autoscroll" checked/> Auto-scroll
+        </label>
+        <span id="log-count" style="font-size:11px;color:var(--muted)">0 entradas</span>
+      </div>
+    </div>
+
     <div id="sec-config" class="section">
       <div class="page-header"><div class="page-title">Configuración</div></div>
       <div class="card">
@@ -2058,7 +2088,6 @@ function loadAutoConfig() {
 
 
 function autoLog(msg, section) {
-  // section: 'scraper', 'editor', 'approval' or undefined (all)
   const logIds = section ? ['auto-'+section+'-log'] : ['auto-scraper-log','auto-editor-log','auto-approval-log'];
   const time = new Date().toLocaleTimeString('es-MX');
   logIds.forEach(id => {
@@ -2068,6 +2097,9 @@ function autoLog(msg, section) {
       log.scrollTop = log.scrollHeight;
     }
   });
+  // Also add to system logs panel
+  const cat = section === 'approval' ? 'publisher' : (section || 'general');
+  addSystemLog(msg, cat);
 }
 
 function clearLog(logId) {
@@ -2676,6 +2708,105 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Cargar al iniciar
 loadConfig();
 
+// ===== LOG SYSTEM =====
+const systemLogs = [];
+const LOG_MAX = 500;
+let currentLogFilter = 'all';
+
+function addSystemLog(message, category = 'general') {
+  const entry = {
+    time: new Date().toLocaleTimeString('es-MX'),
+    message,
+    category,
+    id: Date.now()
+  };
+  systemLogs.push(entry);
+  if (systemLogs.length > LOG_MAX) systemLogs.shift();
+  
+  // Update display if on logs section
+  const container = document.getElementById('system-log-container');
+  if (!container) return;
+  
+  if (currentLogFilter === 'all' || currentLogFilter === category) {
+    const div = document.createElement('div');
+    div.style.padding = '2px 0';
+    div.style.borderBottom = '1px solid var(--border)';
+    
+    const colors = {
+      scraper: 'var(--accent)',
+      editor: 'var(--amber)',
+      publisher: 'var(--green)',
+      gemini: '#a78bfa',
+      chatgpt: '#34d399',
+      error: 'var(--red)',
+      general: 'var(--muted)'
+    };
+    
+    const icons = {
+      scraper: '🔍',
+      editor: '✏️',
+      publisher: '📤',
+      gemini: '🔮',
+      chatgpt: '🤖',
+      error: '❌',
+      general: '📋'
+    };
+    
+    div.innerHTML = `<span style="color:var(--muted)">[${entry.time}]</span> <span style="color:${colors[category]||'var(--text)'}">${icons[category]||'•'}</span> ${message}`;
+    container.appendChild(div);
+    
+    const countEl = document.getElementById('log-count');
+    if(countEl) countEl.textContent = systemLogs.length + ' entradas';
+    
+    const autoScroll = document.getElementById('log-autoscroll');
+    if(autoScroll?.checked) container.scrollTop = container.scrollHeight;
+  }
+}
+
+function showLog(filter) {
+  currentLogFilter = filter;
+  
+  // Update tab buttons
+  document.querySelectorAll('[id^="log-tab-"]').forEach(btn => {
+    btn.className = btn.id === 'log-tab-'+filter ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  });
+  
+  // Re-render logs
+  const container = document.getElementById('system-log-container');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  const filtered = filter === 'all' ? systemLogs : systemLogs.filter(l => l.category === filter);
+  
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted)">Sin logs para esta categoría</div>';
+    return;
+  }
+  
+  const colors = { scraper:'var(--accent)', editor:'var(--amber)', publisher:'var(--green)', gemini:'#a78bfa', chatgpt:'#34d399', error:'var(--red)', general:'var(--muted)' };
+  const icons = { scraper:'🔍', editor:'✏️', publisher:'📤', gemini:'🔮', chatgpt:'🤖', error:'❌', general:'📋' };
+  
+  filtered.forEach(entry => {
+    const div = document.createElement('div');
+    div.style.padding = '2px 0';
+    div.style.borderBottom = '1px solid var(--border)';
+    div.innerHTML = `<span style="color:var(--muted)">[${entry.time}]</span> <span style="color:${colors[entry.category]||'var(--text)'}">${icons[entry.category]||'•'}</span> ${entry.message}`;
+    container.appendChild(div);
+  });
+  
+  container.scrollTop = container.scrollHeight;
+  const countEl = document.getElementById('log-count');
+  if(countEl) countEl.textContent = filtered.length + ' entradas';
+}
+
+function clearSystemLog() {
+  systemLogs.length = 0;
+  const container = document.getElementById('system-log-container');
+  if(container) container.innerHTML = '<div style="color:var(--muted)">Log limpiado...</div>';
+  const countEl = document.getElementById('log-count');
+  if(countEl) countEl.textContent = '0 entradas';
+}
+
 // ===== SECTION TOGGLES =====
 function startSection(section) {
   if (!sectionState[section]) {
@@ -2687,6 +2818,105 @@ function startSection(section) {
   if(section === 'editor') autoEditPosts();
   if(section === 'approval') startAutoPublish();
   toast('▶ Auto '+section+' iniciado');
+}
+
+// ===== LOG SYSTEM =====
+const systemLogs = [];
+const LOG_MAX = 500;
+let currentLogFilter = 'all';
+
+function addSystemLog(message, category = 'general') {
+  const entry = {
+    time: new Date().toLocaleTimeString('es-MX'),
+    message,
+    category,
+    id: Date.now()
+  };
+  systemLogs.push(entry);
+  if (systemLogs.length > LOG_MAX) systemLogs.shift();
+  
+  // Update display if on logs section
+  const container = document.getElementById('system-log-container');
+  if (!container) return;
+  
+  if (currentLogFilter === 'all' || currentLogFilter === category) {
+    const div = document.createElement('div');
+    div.style.padding = '2px 0';
+    div.style.borderBottom = '1px solid var(--border)';
+    
+    const colors = {
+      scraper: 'var(--accent)',
+      editor: 'var(--amber)',
+      publisher: 'var(--green)',
+      gemini: '#a78bfa',
+      chatgpt: '#34d399',
+      error: 'var(--red)',
+      general: 'var(--muted)'
+    };
+    
+    const icons = {
+      scraper: '🔍',
+      editor: '✏️',
+      publisher: '📤',
+      gemini: '🔮',
+      chatgpt: '🤖',
+      error: '❌',
+      general: '📋'
+    };
+    
+    div.innerHTML = `<span style="color:var(--muted)">[${entry.time}]</span> <span style="color:${colors[category]||'var(--text)'}">${icons[category]||'•'}</span> ${message}`;
+    container.appendChild(div);
+    
+    const countEl = document.getElementById('log-count');
+    if(countEl) countEl.textContent = systemLogs.length + ' entradas';
+    
+    const autoScroll = document.getElementById('log-autoscroll');
+    if(autoScroll?.checked) container.scrollTop = container.scrollHeight;
+  }
+}
+
+function showLog(filter) {
+  currentLogFilter = filter;
+  
+  // Update tab buttons
+  document.querySelectorAll('[id^="log-tab-"]').forEach(btn => {
+    btn.className = btn.id === 'log-tab-'+filter ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  });
+  
+  // Re-render logs
+  const container = document.getElementById('system-log-container');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  const filtered = filter === 'all' ? systemLogs : systemLogs.filter(l => l.category === filter);
+  
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted)">Sin logs para esta categoría</div>';
+    return;
+  }
+  
+  const colors = { scraper:'var(--accent)', editor:'var(--amber)', publisher:'var(--green)', gemini:'#a78bfa', chatgpt:'#34d399', error:'var(--red)', general:'var(--muted)' };
+  const icons = { scraper:'🔍', editor:'✏️', publisher:'📤', gemini:'🔮', chatgpt:'🤖', error:'❌', general:'📋' };
+  
+  filtered.forEach(entry => {
+    const div = document.createElement('div');
+    div.style.padding = '2px 0';
+    div.style.borderBottom = '1px solid var(--border)';
+    div.innerHTML = `<span style="color:var(--muted)">[${entry.time}]</span> <span style="color:${colors[entry.category]||'var(--text)'}">${icons[entry.category]||'•'}</span> ${entry.message}`;
+    container.appendChild(div);
+  });
+  
+  container.scrollTop = container.scrollHeight;
+  const countEl = document.getElementById('log-count');
+  if(countEl) countEl.textContent = filtered.length + ' entradas';
+}
+
+function clearSystemLog() {
+  systemLogs.length = 0;
+  const container = document.getElementById('system-log-container');
+  if(container) container.innerHTML = '<div style="color:var(--muted)">Log limpiado...</div>';
+  const countEl = document.getElementById('log-count');
+  if(countEl) countEl.textContent = '0 entradas';
 }
 
 // ===== SECTION TOGGLES =====
