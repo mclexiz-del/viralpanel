@@ -194,6 +194,9 @@ setInterval(async () => {
 }, 30000);
 
 const server = http.createServer(async (req, res) => {
+  // Set timeout to 3 minutes for slow AI requests
+  req.setTimeout(180000);
+  res.setTimeout(180000);
   if (req.method === 'OPTIONS') {
     res.writeHead(204, corsHeaders()); res.end(); return;
   }
