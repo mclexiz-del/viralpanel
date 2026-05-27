@@ -305,7 +305,7 @@ const server = http.createServer(async (req, res) => {
       const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
 
       // Intentar con 1024x1024 primero (máximo soportado para edits)
-      console.log('  🤖 Enviando a gpt-image-1 (quality: high)...');
+      console.log('  🤖 Enviando a gpt-image-2 (quality: high)...');
       console.log('  🤖 Modelo OpenAI: gpt-image-2 (edición real via /v1/images/edits)');
       console.log('  🔑 API Key length:', OPENAI_API_KEY.length, 'starts:', OPENAI_API_KEY.substring(0,10));
       const boundary = '----FormBoundary' + Math.random().toString(36).substr(2);
@@ -324,6 +324,7 @@ const server = http.createServer(async (req, res) => {
         formData
       );
       console.log('  ✅ OpenAI respondió:', result.status);
+      console.log('  📦 OpenAI respuesta (primeros 500 chars):', result.body.substring(0, 500));
       res.writeHead(result.status, corsHeaders({ 'Content-Type': 'application/json' }));
       res.end(result.body);
     } catch (e) {
@@ -430,7 +431,7 @@ const server = http.createServer(async (req, res) => {
       console.log('  📤 Enviando a Gemini...');
       const geminiResult = await httpsPost(
         'generativelanguage.googleapis.com',
-        '/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=' + GEMINI_API_KEY,
+        '/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=' + encodeURIComponent(GEMINI_API_KEY),
         { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(geminiPayload) },
         Buffer.from(geminiPayload)
       );
