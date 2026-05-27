@@ -303,6 +303,7 @@ const server = http.createServer(async (req, res) => {
 
       // Intentar con 1024x1024 primero (máximo soportado para edits)
       console.log('  🤖 Enviando a gpt-image-1 (quality: high)...');
+      console.log('  🤖 Modelo OpenAI: gpt-image-1.5');
       const boundary = '----FormBoundary' + Math.random().toString(36).substr(2);
       const formData = buildMultipart(
         boundary,
