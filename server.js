@@ -431,11 +431,9 @@ const server = http.createServer(async (req, res) => {
 
       console.log('  🔮 Enviando a Gemini...');
 
-      // Keep prompt SHORT to avoid MALFORMED_FUNCTION_CALL
-      // Take only first 80 chars of prompt
-      const cleanPrompt = prompt.replace(/\n/g, ' ').replace(/,.*/, '').trim();
-      const simplePrompt = cleanPrompt.substring(0, 80) + ', keep people intact';
-      console.log('  📝 Prompt:', simplePrompt);
+      // Send prompt exactly as user typed it - no modifications
+      const simplePrompt = prompt.trim();
+      console.log('  📝 Prompt:', simplePrompt.substring(0, 150));
 
       const geminiPayload = JSON.stringify({
         contents: [{
