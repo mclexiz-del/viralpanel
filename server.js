@@ -344,6 +344,7 @@ const server = http.createServer(async (req, res) => {
             180000
           );
           console.log('  ✅ gpt-image-2 completó job:', jobId, 'status:', result.status);
+          if (result.status !== 200) console.log('  ❌ OpenAI error body:', result.body.substring(0, 300));
           const data = JSON.parse(result.body);
           global.aiJobs[jobId] = { status: 'done', result: data, error: null };
           // Cleanup after 10 minutes
