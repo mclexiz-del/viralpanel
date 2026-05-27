@@ -303,12 +303,12 @@ const server = http.createServer(async (req, res) => {
 
       // Intentar con 1024x1024 primero (máximo soportado para edits)
       console.log('  🤖 Enviando a gpt-image-1 (quality: high)...');
-      console.log('  🤖 Modelo OpenAI: gpt-image-1.5');
+      console.log('  🤖 Modelo OpenAI: gpt-image-2 (edición real via /v1/images/edits)');
       console.log('  🔑 API Key length:', OPENAI_API_KEY.length, 'starts:', OPENAI_API_KEY.substring(0,10));
       const boundary = '----FormBoundary' + Math.random().toString(36).substr(2);
       const formData = buildMultipart(
         boundary,
-        { model: 'gpt-image-1.5', prompt: enhancedPrompt, size: '1024x1024', quality: 'high' },
+        { model: 'gpt-image-2', prompt: enhancedPrompt, size: '1024x1024', quality: 'high' },
         'image[]', imgBuffer, 'image.' + ext, mimeType
       );
       const result = await httpsPost(
