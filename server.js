@@ -306,7 +306,7 @@ const server = http.createServer(async (req, res) => {
       const boundary = '----FormBoundary' + Math.random().toString(36).substr(2);
       const formData = buildMultipart(
         boundary,
-        { model: 'gpt-image-1', prompt: enhancedPrompt, size: '1024x1024', quality: 'high' },
+        { model: 'gpt-image-1.5', prompt: enhancedPrompt, size: '1024x1024', quality: 'high' },
         'image[]', imgBuffer, 'image.' + ext, mimeType
       );
       const result = await httpsPost(
