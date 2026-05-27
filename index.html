@@ -1390,7 +1390,7 @@ async function runChatGPT(){
     });
     const submitData=await submitRes.json();
     if(submitData.error) throw new Error(submitData.error.message||JSON.stringify(submitData.error));
-    let src='';
+    var src=''; // use var for broader scope
     if(submitData.data){
       // Sync response
       clearInterval(stepInterval);

@@ -431,11 +431,11 @@ const server = http.createServer(async (req, res) => {
 
       console.log('  🔮 Enviando a Gemini...');
 
-      // Send prompt directly as-is - no splitting, no translation
-      // Just clean it up and send as single natural sentence
-      const cleanPrompt = prompt.replace(/\n/g, ', ').replace(/,\s*,/g, ',').trim();
-      const simplePrompt = cleanPrompt + '. Keep all people and faces exactly as they are.';
-      console.log('  📝 Prompt:', simplePrompt.substring(0, 200));
+      // Keep prompt SHORT to avoid MALFORMED_FUNCTION_CALL
+      // Take only first 80 chars of prompt
+      const cleanPrompt = prompt.replace(/\n/g, ' ').replace(/,.*/, '').trim();
+      const simplePrompt = cleanPrompt.substring(0, 80) + ', keep people intact';
+      console.log('  📝 Prompt:', simplePrompt);
 
       const geminiPayload = JSON.stringify({
         contents: [{
@@ -467,13 +467,12 @@ const server = http.createServer(async (req, res) => {
       );
 
 console.log('  ✅ Gemini respondió:', geminiResult.status);
-      if (geminiResult.status === 200) {
-        const preview = JSON.parse(geminiResult.body);
-        const hasImage = preview.candidates?.[0]?.content?.parts?.some(p => p.inlineData || p.inline_data);
-        console.log('  🖼️ Imagen en respuesta:', hasImage ? 'SÍ' : 'NO');
-        if (!hasImage) console.log('  ⚠️ Respuesta:', JSON.stringify(preview).substring(0, 500));
-      }
-      const geminiData = JSON.parse(geminiResult.body);
+      const geminiDebug = JSON.parse(geminiResult.body);
+      const finishReason = geminiDebug.candidates?.[0]?.finishReason;
+      const hasImage = geminiDebug.candidates?.[0]?.content?.parts?.some(p => p.inlineData || p.inline_data);
+      console.log('  🖼️ Imagen:', hasImage ? 'SÍ' : 'NO', '| finishReason:', finishReason);
+      if (!hasImage) console.log('  ⚠️ Respuesta completa:', JSON.stringify(geminiDebug).substring(0, 600));
+      const geminiData = geminiDebug; // already parsed above
 
       if (geminiResult.status !== 200) {
         console.log('  ❌ Gemini error:', geminiResult.body);
