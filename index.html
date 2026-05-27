@@ -317,6 +317,10 @@ select option{background:var(--surface2)}textarea{resize:vertical}
     <span class="nav-emoji">⚙️</span>
     <span>Config</span>
   </button>
+  <button class="mobile-nav-item" onclick="if(typeof nav==='function')nav('logs',this)" data-label="Logs">
+    <span class="nav-emoji">📋</span>
+    <span>Logs</span>
+  </button>
 </div>
 
 <div id="lightbox" onclick="lbClick(event)">
@@ -338,6 +342,7 @@ select option{background:var(--surface2)}textarea{resize:vertical}
       <div class="nav-item" onclick="if(typeof nav==='function')nav('aprobacion',this)"><span>✅</span> Aprobación <span class="badge" id="badge-aprobacion" style="display:none">0</span></div>
       <div class="nav-item" onclick="if(typeof nav==='function')nav('publicar',this)"><span>📅</span> Publicar</div>
       <div class="nav-item" onclick="if(typeof nav==='function')nav('config',this)"><span>⚙️</span> Config</div>
+      <div class="nav-item" onclick="if(typeof nav==='function')nav('logs',this)"><span>📋</span> Logs</div>
     </nav>
     <div style="margin-top:auto;padding:16px 20px;border-top:1px solid var(--border)">
       <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Apify</div>
